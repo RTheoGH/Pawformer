@@ -440,9 +440,9 @@ public:
     }
 };
 
-float gethauteur(std::shared_ptr<Scene> scene,float x, float z){
-    float hauteurMax = -1.0f;
-    
+float gethauteur(std::shared_ptr<Scene> scene,glm::vec3 cube_pos){
+    float hauteurMax = -1000.0f;
+    std::shared_ptr<SNode> maxPlan;
     for(const std::shared_ptr<SNode>& plan: scene->racine->feuilles){
         if(plan->type_objet == 1){
             float planX = plan->transform.position.x;
@@ -450,10 +450,11 @@ float gethauteur(std::shared_ptr<Scene> scene,float x, float z){
             float largeur = 5.0f;
             float longueur = 5.0f;
 
-            if(x >= planX - largeur && x <= planX + largeur &&
-                z >= planZ - longueur && z<= planZ + longueur
+            if(cube_pos.x >= planX - largeur && cube_pos.x <= planX + largeur &&
+                cube_pos.z >= planZ - longueur && cube_pos.z<= planZ + longueur
             ){
-                if(plan->transform.position.y > hauteurMax+0.5){
+
+                if(plan->transform.position.y > hauteurMax && cube_pos.y > plan->transform.position.y){
                     hauteurMax = plan->transform.position.y+0.5;
                 }
             }
@@ -605,11 +606,13 @@ int main( void ){
             // camera_target = cube->transform.position + glm::vec3(0.0f, 0.0f, 1.0f);
         }
 
+        float plan_hauteur = gethauteur(scene,cube->transform.position);
+
         if(isJumping){
             cube->transform.position.y += deltaTime * 6.0f;
             vitesse += acceleration * deltaTime;
         }
-        if (cube->transform.position.y >= jump_limit.y){
+        if (cube->transform.position.y >= plan_hauteur + jump_limit.y){
             isJumping = false;
             isFalling = true;
         }
@@ -632,7 +635,7 @@ int main( void ){
         //     heightmapHeight
         // );
 
-        float plan_hauteur = gethauteur(scene,cube->transform.position.x,cube->transform.position.z);
+        
         
         // Empêche le soleil de traverser le sol
         if (cube->transform.position.y < plan_hauteur) {
@@ -746,9 +749,7 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> cube){
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !isJumping && !isFalling){
         isJumping = true;
         cube->transform.position.y += deltaTime;
-        // while(cube->transform.position.y < jump_limit.y){
-            
-        // }
+        jump_limit = cube->transform.position + glm::vec3(0., 2., 0.);
     } 
 }
 
