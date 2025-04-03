@@ -62,6 +62,15 @@ glm::mat4 MVP;
 
 bool debugFilaire = false;
 
+glm::vec3 jump_limit = glm::vec3(0.0f,2.0f,0.0f);
+bool isJumping = false;
+bool isFalling = false;
+
+double gravite = 10.0f;
+double masse_cube = 2.0f;
+
+double poids = masse_cube*gravite;
+
 /*******************************************************************************/
 
 // Chargeur de texture
@@ -424,6 +433,28 @@ public:
     }
 };
 
+float gethauteur(std::shared_ptr<Scene> scene,float x, float z){
+    float hauteurMax = -1.0f;
+    
+    for(const std::shared_ptr<SNode>& plan: scene->racine->feuilles){
+        if(plan->type_objet == 1){
+            float planX = plan->transform.position.x;
+            float planZ = plan->transform.position.z;
+            float largeur = 5.0f;
+            float longueur = 5.0f;
+
+            if(x >= planX - largeur && x <= planX + largeur &&
+                z >= planZ - longueur && z<= planZ + longueur
+            ){
+                if(plan->transform.position.y > hauteurMax+0.5){
+                    hauteurMax = plan->transform.position.y+0.5;
+                }
+            }
+        }
+    }
+    return hauteurMax;
+}
+
 /*******************************************************************************/
 
 void processInput(GLFWwindow *window,std::shared_ptr<SNode> soleil);
@@ -524,12 +555,18 @@ int main( void ){
     //     "textures/s2.png",
     //     std::vector<const char*>{"modeles/sphere2.off","modeles/sphere.off"}
     // );
+
+    std::shared_ptr<SNode> jump;
     std::shared_ptr<SNode> plan = std::make_shared<SNode>(1,"textures/grass.png");
+    std::shared_ptr<SNode> plan2 = std::make_shared<SNode>(1,"textures/grass.png");
 
     scene->racine->addFeuille(cube);
     scene->racine->addFeuille(plan);
+    scene->racine->addFeuille(plan2);
 
     cube->transform.position = glm::vec3(0.0f,0.5f,0.0f);
+
+    plan2->transform.position = glm::vec3(5.0f,1.0f,0.0f);
 
     float time = 0.0f;
 
@@ -540,17 +577,42 @@ int main( void ){
     std::vector<glm::vec3> terrainVertices = plan->vertices;
     std::vector<unsigned short> terrainIndices = plan->indices;
 
+    glm::vec3 acceleration = glm::vec3(0.0f,-gravite,0.0f);
+    glm::vec3 vitesse = glm::vec3(0.0f,0.0f,0.0f);
+
     do{
         // Measure speed
         // per-frame time logic
         // --------------------
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
+        // std::cout << "d : " << deltaTime << std::endl;
         lastFrame = currentFrame;
 
         // input
         // -----
         processInput(window,cube);
+
+        camera_position = cube->transform.position + glm::vec3(0.0f,0.0f,10.0f); 
+        // camera_target = cube->transform.position + glm::vec3(0.0f, 0.0f, 1.0f);
+
+        if(isJumping){
+            cube->transform.position.y += deltaTime * 6.0f;
+            vitesse += acceleration * deltaTime;
+        }
+        if (cube->transform.position.y >= jump_limit.y){
+            isJumping = false;
+            isFalling = true;
+        }
+
+        if(isFalling){
+            cube->transform.position.y -= vitesse.length() * deltaTime * 2;
+        }
+
+        // if(cube->transform.postion.y == jump_limit.y){
+
+        // }
+
         // float terrainHeight = getTerrainHeight(
         //     soleil->transform.position.x,
         //     soleil->transform.position.z,
@@ -560,10 +622,13 @@ int main( void ){
         //     heightmapWidth,
         //     heightmapHeight
         // );
+
+        float plan_hauteur = gethauteur(scene,cube->transform.position.x,cube->transform.position.z);
         
         // Empêche le soleil de traverser le sol
-        if (cube->transform.position.y < 0.5) {
-            cube->transform.position.y = 0.5;
+        if (cube->transform.position.y < plan_hauteur) {
+            cube->transform.position.y = plan_hauteur;
+            isFalling = false;
         }
 
         if (debugFilaire) {
@@ -618,23 +683,31 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> cube){
         camera_position += glm::normalize(glm::cross(camera_target,camera_up))*cameraSpeed;
     if(glfwGetKey(window,GLFW_KEY_S) == GLFW_PRESS)
         camera_position -= cameraSpeed * camera_up;
-    if(glfwGetKey(window,GLFW_KEY_V) == GLFW_PRESS)
+    if(glfwGetKey(window,GLFW_KEY_F) == GLFW_PRESS)
         debugFilaire = !debugFilaire;
 
     /****************************************/
 
     if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) 
-        cube->transform.position -= glm::vec3(0.0f, 0.0f, 0.05f);
+        cube->transform.position -= glm::vec3(0.0f, 0.0f, 0.1f);
     if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) 
-        cube->transform.position += glm::vec3(0.0f, 0.0f, 0.05f);
+        cube->transform.position += glm::vec3(0.0f, 0.0f, 0.1f);
     if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) 
-        cube->transform.position -= glm::vec3(0.05f, 0.0f, 0.0f);
+        cube->transform.position -= glm::vec3(0.1f, 0.0f, 0.0f);
     if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) 
-        cube->transform.position += glm::vec3(0.05f, 0.0f, 0.0f);
+        cube->transform.position += glm::vec3(0.1f, 0.0f, 0.0f);
     if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) 
-        cube->transform.position -= glm::vec3(0.0f, 0.05f, 0.0f);
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) 
-        cube->transform.position += glm::vec3(0.0f, 0.05f, 0.0f);
+        cube->transform.position -= glm::vec3(0.0f, 0.1f, 0.0f);
+    if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS) 
+        cube->transform.position += glm::vec3(0.0f, 0.1f, 0.0f);
+
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !isJumping && !isFalling){
+        isJumping = true;
+        cube->transform.position.y += deltaTime;
+        // while(cube->transform.position.y < jump_limit.y){
+            
+        // }
+    } 
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
