@@ -62,6 +62,10 @@ glm::mat4 MVP;
 
 bool debugFilaire = false;
 
+bool cam_attache = false;
+float yaw_ = -90.0f;
+float pitch_ = 0.0f;
+
 glm::vec3 jump_limit = glm::vec3(0.0f,2.0f,0.0f);
 bool isJumping = false;
 bool isFalling = false;
@@ -309,6 +313,9 @@ public:
             case 3:
                 cube(vertices,uvs,indices);
                 break;
+            case 4:
+                loadOFF("modeles/kitten.off",vertices,indices,triangles);
+                break;
             default:
                 loadOFF("modeles/sphere2.off",vertices,indices,triangles);
                 calculateUVSphere(vertices,uvs);
@@ -549,6 +556,7 @@ int main( void ){
 
     // std::shared_ptr<SNode> cube = std::make_shared<SNode>(3,glm::vec3(1.0,0.0,0.0));
     std::shared_ptr<SNode> cube = std::make_shared<SNode>(3,"textures/rock.png");
+    // std::shared_ptr<SNode> cube = std::make_shared<SNode>(4,glm::vec3(1.0,0.0,0.0));
     std::shared_ptr<SNode> soleil = std::make_shared<SNode>(0,"textures/s2.png"); // Sans LOD
     // std::shared_ptr<SNode> soleil = std::make_shared<SNode>(
     //     2,
@@ -565,7 +573,6 @@ int main( void ){
     scene->racine->addFeuille(plan2);
 
     cube->transform.position = glm::vec3(0.0f,0.5f,0.0f);
-
     plan2->transform.position = glm::vec3(5.0f,1.0f,0.0f);
 
     float time = 0.0f;
@@ -593,8 +600,10 @@ int main( void ){
         // -----
         processInput(window,cube);
 
-        camera_position = cube->transform.position + glm::vec3(0.0f,0.0f,10.0f); 
-        // camera_target = cube->transform.position + glm::vec3(0.0f, 0.0f, 1.0f);
+        if(cam_attache){
+            camera_position = cube->transform.position + glm::vec3(0.0f,0.0f,10.0f); 
+            // camera_target = cube->transform.position + glm::vec3(0.0f, 0.0f, 1.0f);
+        }
 
         if(isJumping){
             cube->transform.position.y += deltaTime * 6.0f;
@@ -671,20 +680,53 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> cube){
         glfwSetWindowShouldClose(window, true);
 
     float cameraSpeed = 5.0 * deltaTime;
-    if(glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
-        camera_position += cameraSpeed * camera_target;
-    if(glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS)
-        camera_position -= cameraSpeed * camera_target;
-    if(glfwGetKey(window,GLFW_KEY_A) == GLFW_PRESS)
-        camera_position -= glm::normalize(glm::cross(camera_target,camera_up))*cameraSpeed;
-    if(glfwGetKey(window,GLFW_KEY_W) == GLFW_PRESS)
-        camera_position += cameraSpeed * camera_up;
-    if(glfwGetKey(window,GLFW_KEY_D) == GLFW_PRESS)
-        camera_position += glm::normalize(glm::cross(camera_target,camera_up))*cameraSpeed;
-    if(glfwGetKey(window,GLFW_KEY_S) == GLFW_PRESS)
-        camera_position -= cameraSpeed * camera_up;
+
     if(glfwGetKey(window,GLFW_KEY_F) == GLFW_PRESS)
         debugFilaire = !debugFilaire;
+    if(glfwGetKey(window,GLFW_KEY_N) == GLFW_PRESS)
+        cam_attache = !cam_attache;
+
+    if(!cam_attache){
+        if(glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
+                camera_position += cameraSpeed * camera_target;
+        if(glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS)
+            camera_position -= cameraSpeed * camera_target;
+        if(glfwGetKey(window,GLFW_KEY_A) == GLFW_PRESS)
+            camera_position -= glm::normalize(glm::cross(camera_target,camera_up))*cameraSpeed;
+        if(glfwGetKey(window,GLFW_KEY_W) == GLFW_PRESS)
+            camera_position += cameraSpeed * camera_up;
+        if(glfwGetKey(window,GLFW_KEY_D) == GLFW_PRESS)
+            camera_position += glm::normalize(glm::cross(camera_target,camera_up))*cameraSpeed;
+        if(glfwGetKey(window,GLFW_KEY_S) == GLFW_PRESS)
+            camera_position -= cameraSpeed * camera_up;
+
+        float sensitivity = 20.0f * cameraSpeed;
+        if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS)
+            yaw_ -= sensitivity;
+        if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS)
+            yaw_ += sensitivity;
+        if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS)
+            pitch_ += sensitivity;
+        if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS)
+            pitch_ -= sensitivity;
+
+        if (pitch_ > 89.0f)
+            pitch_ = 89.0f;
+        if (pitch_ < -89.0f)
+            pitch_ = -89.0f;
+
+        glm::vec3 front;
+        front.x = cos(glm::radians(yaw_)) * cos(glm::radians(pitch_));
+        front.y = sin(glm::radians(pitch_));
+        front.z = sin(glm::radians(yaw_)) * cos(glm::radians(pitch_));
+        camera_target = glm::normalize(front);
+    }else{
+        camera_target = glm::vec3(0.0f, 0.0f, -1.0f);
+    }
+    
+    
+    // if(glfwGetKey(window,GLFW_KEY_N) == GLFW_PRESS)
+    //     cam_attache = !cam_attache;
 
     /****************************************/
 
