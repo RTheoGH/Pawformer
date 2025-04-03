@@ -607,19 +607,34 @@ int main( void ){
         }
 
         float plan_hauteur = gethauteur(scene,cube->transform.position);
+        // std::cout << "hauteur :" << plan_hauteur << std::endl;
 
         if(isJumping){
-            cube->transform.position.y += deltaTime * 6.0f;
+            cube->transform.position.y += deltaTime * 8.0f;
             vitesse += acceleration * deltaTime;
         }
-        if (cube->transform.position.y >= plan_hauteur + jump_limit.y){
+        if (cube->transform.position.y > plan_hauteur + jump_limit.y){
             isJumping = false;
             isFalling = true;
         }
 
-        if(isFalling){
-            cube->transform.position.y -= vitesse.length() * deltaTime * 2;
+        if (isFalling) {
+            cube->transform.position.y -= vitesse.length() * deltaTime * 3;
+
+            if (cube->transform.position.y < plan_hauteur) {
+                cube->transform.position.y = plan_hauteur;
+                isFalling = false;
+            }
         }
+
+        // std::cout << "cube y : " << cube->transform.position.y << std::endl;
+        // std::cout << "plan y : " << plan_hauteur << std::endl;
+        // std::cout << "plan y +0.5 : " << plan_hauteur+0.5 << std::endl;
+
+        // if(cube->transform.position.y == plan_hauteur + 0.5){
+        //     std::cout << "je tombe" << std::endl;
+        //     isFalling = true;
+        // }
 
         // if(cube->transform.postion.y == jump_limit.y){
 
