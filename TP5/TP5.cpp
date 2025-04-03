@@ -143,6 +143,29 @@ void plan(std::vector<glm::vec3> &vertices,std::vector<glm::vec2> &uvs,std::vect
     }
 }
 
+void cube(std::vector<glm::vec3> &vertices, std::vector<unsigned short> &indices) {
+    vertices = {
+        {-0.5f, -0.5f, -0.5f},
+        { 0.5f, -0.5f, -0.5f},
+        { 0.5f,  0.5f, -0.5f},
+        {-0.5f,  0.5f, -0.5f},
+        {-0.5f, -0.5f,  0.5f},
+        { 0.5f, -0.5f,  0.5f}, 
+        { 0.5f,  0.5f,  0.5f}, 
+        {-0.5f,  0.5f,  0.5f}
+    };
+
+    indices = {
+        0, 1, 2,  2, 3, 0,
+        1, 5, 6,  6, 2, 1,
+        5, 4, 7,  7, 6, 5,
+        4, 0, 3,  3, 7, 4, 
+        3, 2, 6,  6, 7, 3,
+        4, 5, 1,  1, 0, 4  
+    };
+}
+
+
 float getTerrainHeight(float x, float z, const std::vector<glm::vec3>& vertices, const std::vector<unsigned short>& indices, const unsigned char* heightmapData, int heightmapWidth, int heightmapHeight) {
     float taille = 10.0f;
     float m = taille / 2.0f;
@@ -262,6 +285,9 @@ public:
                 break;
             case 2:
                 calculateUVSphere(vertices,uvs);
+                break;
+            case 3:
+                cube(vertices, indices);
                 break;
             default:
                 loadOFF("modeles/sphere2.off",vertices,indices,triangles);
@@ -480,17 +506,14 @@ int main( void ){
     std::shared_ptr<Scene> scene = std::make_shared<Scene>();
 
     // std::shared_ptr<SNode> soleil = std::make_shared<SNode>(0,"textures/s2.png"); // Sans LOD
-    std::shared_ptr<SNode> soleil = std::make_shared<SNode>(
-        2,
-        "textures/s2.png",
-        std::vector<const char*>{"modeles/sphere2.off","modeles/sphere.off"}
+    std::shared_ptr<SNode> cube = std::make_shared<SNode>(
+        3,
+        glm::vec3(1., 0., 0.)
     );
     std::shared_ptr<SNode> plan = std::make_shared<SNode>(1,"textures/grass.png");
 
-    soleil->transform.scale = glm::vec3(0.25f);
-    soleil->transform.position = glm::vec3(0.0f,1.0f,0.0f);
 
-    scene->racine->addFeuille(soleil);
+    scene->racine->addFeuille(cube);
     scene->racine->addFeuille(plan);
 
     float time = 0.0f;
@@ -512,10 +535,10 @@ int main( void ){
 
         // input
         // -----
-        processInput(window,soleil);
+        processInput(window,cube);
         float terrainHeight = getTerrainHeight(
-            soleil->transform.position.x,
-            soleil->transform.position.z,
+            cube->transform.position.x,
+            cube->transform.position.z,
             terrainVertices, 
             terrainIndices,
             heightmapData,
@@ -524,8 +547,8 @@ int main( void ){
         );
         
         // Empêche le soleil de traverser le sol
-        if (soleil->transform.position.y < terrainHeight) {
-            soleil->transform.position.y = terrainHeight;
+        if (cube->transform.position.y < terrainHeight) {
+            cube->transform.position.y = terrainHeight;
         }
 
         if (debugFilaire) {
