@@ -143,7 +143,7 @@ void plan(std::vector<glm::vec3> &vertices,std::vector<glm::vec2> &uvs,std::vect
     }
 }
 
-void cube(std::vector<glm::vec3> &vertices, std::vector<unsigned short> &indices) {
+void cube(std::vector<glm::vec3> &vertices,std::vector<glm::vec2> &uvs, std::vector<unsigned short> &indices) {
     vertices = {
         {-0.5f, -0.5f, -0.5f},
         { 0.5f, -0.5f, -0.5f},
@@ -153,6 +153,17 @@ void cube(std::vector<glm::vec3> &vertices, std::vector<unsigned short> &indices
         { 0.5f, -0.5f,  0.5f}, 
         { 0.5f,  0.5f,  0.5f}, 
         {-0.5f,  0.5f,  0.5f}
+    };
+
+    uvs = {
+        {0.0f,0.0f},
+        {1.0f,0.0f},
+        {1.0f,1.0f},
+        {0.0f,1.0f},
+        {0.0f,0.0f},
+        {1.0f,0.0f},
+        {1.0f,1.0f},
+        {0.0f,1.0f}
     };
 
     indices = {
@@ -287,7 +298,7 @@ public:
                 calculateUVSphere(vertices,uvs);
                 break;
             case 3:
-                cube(vertices, indices);
+                cube(vertices,uvs,indices);
                 break;
             default:
                 loadOFF("modeles/sphere2.off",vertices,indices,triangles);
@@ -505,6 +516,8 @@ int main( void ){
 
     std::shared_ptr<Scene> scene = std::make_shared<Scene>();
 
+    // std::shared_ptr<SNode> cube = std::make_shared<SNode>(3,glm::vec3(1.0,0.0,0.0));
+    std::shared_ptr<SNode> cube = std::make_shared<SNode>(3,"textures/rock.png");
     std::shared_ptr<SNode> soleil = std::make_shared<SNode>(0,"textures/s2.png"); // Sans LOD
     // std::shared_ptr<SNode> soleil = std::make_shared<SNode>(
     //     2,
@@ -513,9 +526,10 @@ int main( void ){
     // );
     std::shared_ptr<SNode> plan = std::make_shared<SNode>(1,"textures/grass.png");
 
-
     scene->racine->addFeuille(cube);
     scene->racine->addFeuille(plan);
+
+    cube->transform.position = glm::vec3(0.0f,0.5f,0.0f);
 
     float time = 0.0f;
 
@@ -536,7 +550,7 @@ int main( void ){
 
         // input
         // -----
-        processInput(window,soleil);
+        processInput(window,cube);
         // float terrainHeight = getTerrainHeight(
         //     soleil->transform.position.x,
         //     soleil->transform.position.z,
@@ -548,8 +562,8 @@ int main( void ){
         // );
         
         // Empêche le soleil de traverser le sol
-        if (soleil->transform.position.y < 0) {
-            soleil->transform.position.y = 0;
+        if (cube->transform.position.y < 0.5) {
+            cube->transform.position.y = 0.5;
         }
 
         if (debugFilaire) {
@@ -587,7 +601,7 @@ int main( void ){
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window, std::shared_ptr<SNode> soleil){
+void processInput(GLFWwindow *window, std::shared_ptr<SNode> cube){
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
@@ -610,17 +624,17 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> soleil){
     /****************************************/
 
     if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) 
-        soleil->transform.position -= glm::vec3(0.0f, 0.0f, 0.05f);
+        cube->transform.position -= glm::vec3(0.0f, 0.0f, 0.05f);
     if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) 
-        soleil->transform.position += glm::vec3(0.0f, 0.0f, 0.05f);
+        cube->transform.position += glm::vec3(0.0f, 0.0f, 0.05f);
     if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) 
-        soleil->transform.position -= glm::vec3(0.05f, 0.0f, 0.0f);
+        cube->transform.position -= glm::vec3(0.05f, 0.0f, 0.0f);
     if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) 
-        soleil->transform.position += glm::vec3(0.05f, 0.0f, 0.0f);
+        cube->transform.position += glm::vec3(0.05f, 0.0f, 0.0f);
     if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) 
-        soleil->transform.position -= glm::vec3(0.0f, 0.05f, 0.0f);
+        cube->transform.position -= glm::vec3(0.0f, 0.05f, 0.0f);
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) 
-        soleil->transform.position += glm::vec3(0.0f, 0.05f, 0.0f);
+        cube->transform.position += glm::vec3(0.0f, 0.05f, 0.0f);
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
