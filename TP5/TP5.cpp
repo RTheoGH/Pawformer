@@ -362,8 +362,8 @@ public:
         MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
         glUniformMatrix4fv(MatrixID,1,GL_FALSE,&MVP[0][0]);
 
-        GLuint isTerrainID = glGetUniformLocation(shaderProgram,"isTerrain");
-        glUniform1i(isTerrainID,(type_objet == 1) ? 1 : 0);
+        // GLuint isTerrainID = glGetUniformLocation(shaderProgram,"isTerrain");
+        // glUniform1i(isTerrainID,(type_objet == 1) ? 1 : 0);
 
         GLuint colorLocation = glGetUniformLocation(shaderProgram,"objColor");
         glUniform3fv(colorLocation,1,&color[0]);
@@ -505,11 +505,12 @@ int main( void ){
 
     std::shared_ptr<Scene> scene = std::make_shared<Scene>();
 
-    // std::shared_ptr<SNode> soleil = std::make_shared<SNode>(0,"textures/s2.png"); // Sans LOD
-    std::shared_ptr<SNode> cube = std::make_shared<SNode>(
-        3,
-        glm::vec3(1., 0., 0.)
-    );
+    std::shared_ptr<SNode> soleil = std::make_shared<SNode>(0,"textures/s2.png"); // Sans LOD
+    // std::shared_ptr<SNode> soleil = std::make_shared<SNode>(
+    //     2,
+    //     "textures/s2.png",
+    //     std::vector<const char*>{"modeles/sphere2.off","modeles/sphere.off"}
+    // );
     std::shared_ptr<SNode> plan = std::make_shared<SNode>(1,"textures/grass.png");
 
 
@@ -535,20 +536,20 @@ int main( void ){
 
         // input
         // -----
-        processInput(window,cube);
-        float terrainHeight = getTerrainHeight(
-            cube->transform.position.x,
-            cube->transform.position.z,
-            terrainVertices, 
-            terrainIndices,
-            heightmapData,
-            heightmapWidth,
-            heightmapHeight
-        );
+        processInput(window,soleil);
+        // float terrainHeight = getTerrainHeight(
+        //     soleil->transform.position.x,
+        //     soleil->transform.position.z,
+        //     terrainVertices, 
+        //     terrainIndices,
+        //     heightmapData,
+        //     heightmapWidth,
+        //     heightmapHeight
+        // );
         
         // Empêche le soleil de traverser le sol
-        if (cube->transform.position.y < terrainHeight) {
-            cube->transform.position.y = terrainHeight;
+        if (soleil->transform.position.y < 0) {
+            soleil->transform.position.y = 0;
         }
 
         if (debugFilaire) {

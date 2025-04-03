@@ -15,10 +15,10 @@ void main(){
 
         vec3 pos = vertices_position_modelspace;
 
-        if(isTerrain == 1){
-                float height = texture(heightmap,vertexUV).r;
-                pos.y += height;
-        }
+        // if(isTerrain == 1){
+        //         float height = texture(heightmap,vertexUV).r;
+        //         pos.y += height;
+        // }
 
         // gl_Position = MVP * vec4(relief,1);
         gl_Position = MVP * vec4(pos,1);
