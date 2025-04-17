@@ -276,6 +276,7 @@ public:
     std::vector<glm::vec3> vertices;
     std::vector<glm::vec2> uvs;
     std::vector<unsigned short> indices;
+    std::vector<glm::vec3> normals;
     std::vector<std::vector<unsigned short>> triangles;
 
     // Constructeurs
@@ -314,7 +315,8 @@ public:
                 cube(vertices,uvs,indices);
                 break;
             case 4:
-                loadOFF("modeles/kitten.off",vertices,indices,triangles);
+                // loadOFF("modeles/kitten.off",vertices,indices,triangles);
+                loadOBJ("modeles/pitier.obj",vertices,uvs,normals);
                 break;
             default:
                 loadOFF("modeles/sphere2.off",vertices,indices,triangles);
@@ -463,6 +465,22 @@ float gethauteur(std::shared_ptr<Scene> scene,glm::vec3 cube_pos){
     return hauteurMax;
 }
 
+float GeometrySchlickGGX(float NdotV, float k){
+    float nom   = NdotV;
+    float denom = NdotV * (1.0 - k) + k;
+	
+    return nom / denom;
+}
+  
+float GeometrySmith(vec3 N, vec3 V, vec3 L, float k){
+    float NdotV = std::max((double)glm::dot(N,V),0.0);
+    float NdotL = std::max((double)glm::dot(N,L),0.0);
+    float ggx1 = GeometrySchlickGGX(NdotV,k);
+    float ggx2 = GeometrySchlickGGX(NdotL,k);
+	
+    return ggx1 * ggx2;
+}
+
 /*******************************************************************************/
 
 void processInput(GLFWwindow *window,std::shared_ptr<SNode> soleil);
@@ -556,8 +574,8 @@ int main( void ){
     std::shared_ptr<Scene> scene = std::make_shared<Scene>();
 
     // std::shared_ptr<SNode> cube = std::make_shared<SNode>(3,glm::vec3(1.0,0.0,0.0));
-    std::shared_ptr<SNode> cube = std::make_shared<SNode>(3,"textures/rock.png");
-    // std::shared_ptr<SNode> cube = std::make_shared<SNode>(4,glm::vec3(1.0,0.0,0.0));
+    // std::shared_ptr<SNode> cube = std::make_shared<SNode>(3,"textures/rock.png");
+    std::shared_ptr<SNode> cube = std::make_shared<SNode>(4,glm::vec3(1.0,0.0,0.0));
     std::shared_ptr<SNode> soleil = std::make_shared<SNode>(0,"textures/s2.png"); // Sans LOD
     // std::shared_ptr<SNode> soleil = std::make_shared<SNode>(
     //     2,
@@ -570,11 +588,13 @@ int main( void ){
     std::shared_ptr<SNode> plan2 = std::make_shared<SNode>(1,"textures/grass.png");
 
     scene->racine->addFeuille(cube);
+    scene->racine->addFeuille(soleil);
     scene->racine->addFeuille(plan);
     scene->racine->addFeuille(plan2);
 
+    soleil->transform.position = glm::vec3(-1.0f,5.0f,1.0f);
     cube->transform.position = glm::vec3(0.0f,0.5f,0.0f);
-    plan2->transform.position = glm::vec3(5.0f,1.0f,0.0f);
+    plan2->transform.position = glm::vec3(6.0f,1.0f,0.0f);
 
     float time = 0.0f;
 
@@ -612,13 +632,8 @@ int main( void ){
         if(isJumping){
             cube->transform.position.y += deltaTime * 8.0f;
             vitesse += acceleration * deltaTime;
-        }
-        if (cube->transform.position.y > plan_hauteur + jump_limit.y){
-            isJumping = false;
+        }else{
             isFalling = true;
-        }
-
-        if (isFalling) {
             cube->transform.position.y -= vitesse.length() * deltaTime * 3;
 
             if (cube->transform.position.y < plan_hauteur) {
@@ -626,36 +641,10 @@ int main( void ){
                 isFalling = false;
             }
         }
-
-        // std::cout << "cube y : " << cube->transform.position.y << std::endl;
-        // std::cout << "plan y : " << plan_hauteur << std::endl;
-        // std::cout << "plan y +0.5 : " << plan_hauteur+0.5 << std::endl;
-
-        // if(cube->transform.position.y == plan_hauteur + 0.5){
-        //     std::cout << "je tombe" << std::endl;
-        //     isFalling = true;
-        // }
-
-        // if(cube->transform.postion.y == jump_limit.y){
-
-        // }
-
-        // float terrainHeight = getTerrainHeight(
-        //     soleil->transform.position.x,
-        //     soleil->transform.position.z,
-        //     terrainVertices, 
-        //     terrainIndices,
-        //     heightmapData,
-        //     heightmapWidth,
-        //     heightmapHeight
-        // );
-
-        
-        
-        // Empêche le soleil de traverser le sol
-        if (cube->transform.position.y < plan_hauteur) {
-            cube->transform.position.y = plan_hauteur;
-            isFalling = false;
+        // std::cout << "(pos.y | plan+jump)" << cube->transform.position.y << " | " << plan_hauteur+jump_limit.y << std::endl;
+        if (cube->transform.position.y > plan_hauteur + jump_limit.y){
+            isJumping = false;
+            isFalling = true;
         }
 
         if (debugFilaire) {
