@@ -34,7 +34,7 @@ const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
 // camera
-glm::vec3 camera_position   = glm::vec3(0.0f, 2.0f, 10.0f);
+glm::vec3 camera_position   = glm::vec3(-1.0f, 10.0f, 20.0f);
 glm::vec3 camera_target = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 camera_up    = glm::vec3(0.0f, 1.0f,  0.0f);
 
@@ -66,7 +66,7 @@ bool cam_attache = false;
 float yaw_ = -90.0f;
 float pitch_ = 0.0f;
 
-glm::vec3 jump_limit = glm::vec3(0.0f,2.0f,0.0f);
+glm::vec3 jump_limit = glm::vec3(0.0f,11.0f,0.0f);
 bool isJumping = false;
 bool isFalling = false;
 
@@ -98,7 +98,7 @@ GLuint loadTexture(const char* filename) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     } else {
         std::cerr << "Failed to load texture: " << filename << std::endl;
     }
@@ -119,7 +119,7 @@ void calculateUVSphere(std::vector<glm::vec3>& vertices,std::vector<glm::vec2>& 
     }
 }
 
-void cylindre(std::vector<glm::vec3> &vertices, std::vector<glm::vec2> &uvs, std::vector<unsigned short> &indices, float hauteur = 10.0f, float rayon = 1.0f, int tranches = 32, int segments = 1){
+void cylindre(std::vector<glm::vec3> &vertices, std::vector<glm::vec2> &uvs, std::vector<unsigned short> &indices, float hauteur = 30.0f, float rayon = 0.5f, int tranches = 32, int segments = 1){
     // Générer les vertices et UVs
     for(int i = 0; i <= segments; ++i){
         float y = ((float)i / segments) * hauteur;
@@ -131,8 +131,11 @@ void cylindre(std::vector<glm::vec3> &vertices, std::vector<glm::vec2> &uvs, std
 
             vertices.emplace_back(glm::vec3(x, y, z));
 
-            float u = (float)j / (float)tranches;
-            float v = (float)i / (float)segments;
+            // float u = (float)j / (float)tranches;
+            // float v = (float)i / (float)segments;
+
+            float u = (float)j*hauteur / (float)tranches/hauteur;
+            float v = (float)i*hauteur / (float)segments;
             uvs.emplace_back(glm::vec2(u, v));
         }
     }
@@ -224,6 +227,44 @@ void cube(std::vector<glm::vec3> &vertices,std::vector<glm::vec2> &uvs, std::vec
         4, 5, 1,  1, 0, 4  
     };
 }
+
+void mur(std::vector<glm::vec3> &vertices, std::vector<glm::vec2> &uvs, std::vector<unsigned short> &indices){
+    float taille = 10.0f;
+    float m = taille / 2.0f;
+    float pas = taille / (float)sommets;
+
+    for(int i = 0; i <= sommets; i++){
+        for(int j = 0; j <= sommets; j++){
+            float x = -m + j * pas;
+            float y = i * pas;
+
+            vertices.emplace_back(glm::vec3(x, y, 0.0f));
+
+            float u = (float)j / (float)(sommets-1);
+            float v = (float)i / (float)(sommets-1);
+
+            uvs.emplace_back(glm::vec2(u, v));
+        }
+    }
+
+    for(int i = 0; i < sommets-1; i++){
+        for(int j = 0; j < sommets-1; j++){
+            int topleft = i * (sommets+1) + j;
+            int topright = topleft + 1;
+            int bottomleft = (i+1) * (sommets+1) + j;
+            int bottomright = bottomleft + 1;
+
+            indices.push_back(topleft);
+            indices.push_back(bottomleft);
+            indices.push_back(topright);
+
+            indices.push_back(topright);
+            indices.push_back(bottomleft);
+            indices.push_back(bottomright);
+        }
+    }
+}
+
 
 
 float getTerrainHeight(float x, float z, const std::vector<glm::vec3>& vertices, const std::vector<unsigned short>& indices, const unsigned char* heightmapData, int heightmapWidth, int heightmapHeight) {
@@ -356,6 +397,9 @@ public:
                 break;
             case 5:
                 cylindre(vertices,uvs,indices);
+                break;
+            case 6:
+                mur(vertices,uvs,indices);
                 break;
             default:
                 loadOFF("modeles/sphere2.off",vertices,indices,triangles);
@@ -625,18 +669,21 @@ int main( void ){
     std::shared_ptr<SNode> jump;
     std::shared_ptr<SNode> plan = std::make_shared<SNode>(1,"textures/grass.png");
     std::shared_ptr<SNode> plan2 = std::make_shared<SNode>(1,"textures/grass.png");
-    std::shared_ptr<SNode> tronc = std::make_shared<SNode>(5,"textures/rock.png");
+    std::shared_ptr<SNode> tronc = std::make_shared<SNode>(5,"textures/corde_texture.png");
+    std::shared_ptr<SNode> mur = std::make_shared<SNode>(6,"textures/rock.png");
 
     scene->racine->addFeuille(cube);
     scene->racine->addFeuille(soleil);
     scene->racine->addFeuille(tronc);
+    scene->racine->addFeuille(mur);
     scene->racine->addFeuille(plan);
     scene->racine->addFeuille(plan2);
 
     soleil->transform.position = glm::vec3(-1.0f,5.0f,1.0f);
     tronc->transform.position = glm::vec3(0.0f,0.0f, 0.0f);
     cube->transform.position = glm::vec3(-1.0f,0.5f,-1.0f);
-    plan2->transform.position = glm::vec3(6.0f,1.0f,0.0f);
+    plan2->transform.position = glm::vec3(0.0f,9.65f,-9.65f);
+    mur->transform.position = glm::vec3(0.0f,0.0f,-5.0f);
 
     float time = 0.0f;
 
@@ -672,11 +719,11 @@ int main( void ){
         // std::cout << "hauteur :" << plan_hauteur << std::endl;
 
         if(isJumping){
-            cube->transform.position.y += deltaTime * 8.0f;
+            cube->transform.position.y += deltaTime * 16.0f;
             vitesse += acceleration * deltaTime;
         }else{
             isFalling = true;
-            cube->transform.position.y -= vitesse.length() * deltaTime * 3;
+            cube->transform.position.y -= vitesse.length() * deltaTime * 6;
 
             if (cube->transform.position.y < plan_hauteur) {
                 cube->transform.position.y = plan_hauteur;
@@ -795,7 +842,7 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> cube){
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !isJumping && !isFalling){
         isJumping = true;
         cube->transform.position.y += deltaTime;
-        jump_limit = cube->transform.position + glm::vec3(0., 2., 0.);
+        jump_limit = cube->transform.position + glm::vec3(0., 11., 0.);
     } 
 }
 
