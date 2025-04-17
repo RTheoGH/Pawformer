@@ -119,6 +119,42 @@ void calculateUVSphere(std::vector<glm::vec3>& vertices,std::vector<glm::vec2>& 
     }
 }
 
+void cylindre(std::vector<glm::vec3> &vertices, std::vector<glm::vec2> &uvs, std::vector<unsigned short> &indices, float hauteur = 10.0f, float rayon = 1.0f, int tranches = 32, int segments = 1){
+    // Générer les vertices et UVs
+    for(int i = 0; i <= segments; ++i){
+        float y = ((float)i / segments) * hauteur;
+
+        for(int j = 0; j <= tranches; ++j){
+            float theta = ((float)j / tranches) * 2.0f * glm::pi<float>();
+            float x = cos(theta) * rayon;
+            float z = sin(theta) * rayon;
+
+            vertices.emplace_back(glm::vec3(x, y, z));
+
+            float u = (float)j / (float)tranches;
+            float v = (float)i / (float)segments;
+            uvs.emplace_back(glm::vec2(u, v));
+        }
+    }
+
+    // Générer les indices
+    for(int i = 0; i < segments; ++i){
+        for(int j = 0; j < tranches; ++j){
+            int current = i * (tranches + 1) + j;
+            int next = current + tranches + 1;
+
+            indices.push_back(current);
+            indices.push_back(next);
+            indices.push_back(current + 1);
+
+            indices.push_back(current + 1);
+            indices.push_back(next);
+            indices.push_back(next + 1);
+        }
+    }
+}
+
+
 void plan(std::vector<glm::vec3> &vertices,std::vector<glm::vec2> &uvs,std::vector<unsigned short> &indices){
     float taille = 10.0f;
     float m = taille / 2.0f;
@@ -317,6 +353,9 @@ public:
             case 4:
                 // loadOFF("modeles/kitten.off",vertices,indices,triangles);
                 loadOBJ("modeles/pitier.obj",vertices,uvs,normals);
+                break;
+            case 5:
+                cylindre(vertices,uvs,indices);
                 break;
             default:
                 loadOFF("modeles/sphere2.off",vertices,indices,triangles);
@@ -574,8 +613,8 @@ int main( void ){
     std::shared_ptr<Scene> scene = std::make_shared<Scene>();
 
     // std::shared_ptr<SNode> cube = std::make_shared<SNode>(3,glm::vec3(1.0,0.0,0.0));
-    // std::shared_ptr<SNode> cube = std::make_shared<SNode>(3,"textures/rock.png");
-    std::shared_ptr<SNode> cube = std::make_shared<SNode>(4,glm::vec3(1.0,0.0,0.0));
+    std::shared_ptr<SNode> cube = std::make_shared<SNode>(3,"textures/rock.png");
+    // std::shared_ptr<SNode> cube = std::make_shared<SNode>(4,glm::vec3(1.0,0.0,0.0));
     std::shared_ptr<SNode> soleil = std::make_shared<SNode>(0,"textures/s2.png"); // Sans LOD
     // std::shared_ptr<SNode> soleil = std::make_shared<SNode>(
     //     2,
@@ -586,14 +625,17 @@ int main( void ){
     std::shared_ptr<SNode> jump;
     std::shared_ptr<SNode> plan = std::make_shared<SNode>(1,"textures/grass.png");
     std::shared_ptr<SNode> plan2 = std::make_shared<SNode>(1,"textures/grass.png");
+    std::shared_ptr<SNode> tronc = std::make_shared<SNode>(5,"textures/rock.png");
 
     scene->racine->addFeuille(cube);
     scene->racine->addFeuille(soleil);
+    scene->racine->addFeuille(tronc);
     scene->racine->addFeuille(plan);
     scene->racine->addFeuille(plan2);
 
     soleil->transform.position = glm::vec3(-1.0f,5.0f,1.0f);
-    cube->transform.position = glm::vec3(0.0f,0.5f,0.0f);
+    tronc->transform.position = glm::vec3(0.0f,0.0f, 0.0f);
+    cube->transform.position = glm::vec3(-1.0f,0.5f,-1.0f);
     plan2->transform.position = glm::vec3(6.0f,1.0f,0.0f);
 
     float time = 0.0f;
