@@ -5,6 +5,7 @@
 #include <vector>
 #include <memory>
 #include <iostream>
+#include <numeric>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -421,7 +422,8 @@ public:
                 break;
             case 4:
                 // loadOFF("modeles/kitten.off",vertices,indices,triangles);
-                loadOBJ("modeles/pitier.obj",vertices,uvs,normals);
+                // loadOBJ("modeles/pitier.obj",vertices,uvs,normals);
+                loadOBJ("modeles/chat.obj",vertices,uvs,normals);
                 break;
             case 5:
                 cylindre(vertices,uvs,indices);
@@ -450,9 +452,26 @@ public:
         glVertexAttribPointer(1,2,GL_FLOAT,GL_FALSE,sizeof(glm::vec2),(void*)0);
         glEnableVertexAttribArray(1);
 
-        glGenBuffers(1,&ibo);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,ibo);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER,indices.size()*sizeof(unsigned short),&indices[0],GL_STATIC_DRAW);
+        if (hasNormals()) {
+            GLuint normalVBO;
+            glGenBuffers(1, &normalVBO);
+            glBindBuffer(GL_ARRAY_BUFFER, normalVBO);
+            glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(glm::vec3), &normals[0], GL_STATIC_DRAW);
+            glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+            glEnableVertexAttribArray(2);
+    
+            // Si l'OBJ n’a pas d’indices, on les génère automatiquement
+            if (!hasIndices()) {
+                indices.resize(vertices.size());
+                std::iota(indices.begin(), indices.end(), 0); // [0, 1, 2, ...]
+            }
+        }
+    
+        if (hasIndices()) {
+            glGenBuffers(1, &ibo);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned short), &indices[0], GL_STATIC_DRAW);
+        }
 
         indexCPT = indices.size();
         glBindVertexArray(0);
@@ -502,10 +521,11 @@ public:
         MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
         glUniformMatrix4fv(MatrixID,1,GL_FALSE,&MVP[0][0]);
 
-        // GLuint isTerrainID = glGetUniformLocation(shaderProgram,"isTerrain");
-        // glUniform1i(isTerrainID,(type_objet == 1) ? 1 : 0);
+        GLuint isColorID = glGetUniformLocation(shaderProgram,"isColor");
+        glUniform1i(isColorID,(type_objet == 4) ? 1 : 0);
 
         GLuint colorLocation = glGetUniformLocation(shaderProgram,"objColor");
+        std::cout << "couleur :" << color[0] << std::endl;
         glUniform3fv(colorLocation,1,&color[0]);
 
         glActiveTexture(GL_TEXTURE0);
@@ -535,6 +555,14 @@ public:
             glm::vec3 worldPos = branchePos + transform.position;
             feuille->draw(shaderProgram,ModelMatrix,worldPos);
         }
+    }
+
+    bool hasNormals() const {
+        return !normals.empty();
+    }
+    
+    bool hasIndices() const {
+        return !indices.empty();
     }
 }; 
 
@@ -686,7 +714,8 @@ int main( void ){
     std::shared_ptr<Scene> scene = std::make_shared<Scene>();
 
     // std::shared_ptr<SNode> cube = std::make_shared<SNode>(3,glm::vec3(1.0,0.0,0.0));
-    std::shared_ptr<SNode> cube = std::make_shared<SNode>(3,"textures/rock.png");
+    // std::shared_ptr<SNode> cube = std::make_shared<SNode>(3,"textures/rock.png");
+    std::shared_ptr<SNode> cube = std::make_shared<SNode>(4,vec3(1.0,0.1,0.2));
     // std::shared_ptr<SNode> cube = std::make_shared<SNode>(4,glm::vec3(1.0,0.0,0.0));
     std::shared_ptr<SNode> soleil = std::make_shared<SNode>(0,"textures/s2.png"); // Sans LOD
     // std::shared_ptr<SNode> soleil = std::make_shared<SNode>(

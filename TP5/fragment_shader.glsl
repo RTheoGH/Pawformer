@@ -6,10 +6,15 @@ out vec3 color;
 
 uniform sampler2D texture1;
 uniform vec3 objColor;
+uniform int isColor;
 
 void main(){
 
-        color = texture(texture1,UV).rgb;
+        if(isColor == 1){
+                color = objColor;
+        }else{
+                color = texture(texture1,UV).rgb;
+        }
         
         // DEBUG
         // color = objColor;
