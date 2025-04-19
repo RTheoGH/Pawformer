@@ -336,11 +336,23 @@ public:
     }
 };
 
+class Light{
+public:
+    glm::vec3 position;
+    float radius;
+    float intensity;
+    Light(glm::vec3 _position){
+        this->position = _position;
+        this->radius = 1.0;
+        this->intensity = 1.0;
+    }
+};
+
 class SNode{
 public:
     Transform transform;
     std::vector<std::shared_ptr<SNode>> feuilles;
-    GLuint vao = 0, vbo = 0, ibo = 0, textureID = 0;
+    GLuint vao = 0, vbo = 0, ibo = 0, textureID = 0, nomalsID = 0, roughnessID = 0, metalnessID = 0, aoID = 0;
     GLuint uvVBO = 0;
     size_t indexCPT = 0;
     glm::vec3 color;
@@ -361,6 +373,22 @@ public:
         type_objet = obj;
         buffers();
         textureID = loadTexture(texturePath);
+    }
+
+    // Pour PBR
+    SNode(int obj,const char* texturePathAlbedo,
+        const char* texturePathNormals,
+        const char* texturePathRoughness, 
+        const char* texturePathMetalness,
+        const char* texturePathAO
+    ){
+        type_objet = obj;
+        buffers();
+        textureID = loadTexture(texturePathAlbedo);
+        nomalsID = loadTexture(texturePathNormals);
+        roughnessID = loadTexture(texturePathRoughness);
+        metalnessID = loadTexture(texturePathMetalness);
+        aoID = loadTexture(texturePathAO);
     }
 
     SNode(int obj,const char* texturePath,std::vector<const char*> modelesPath){
@@ -513,6 +541,7 @@ public:
 class Scene{
 public:
     std::shared_ptr<SNode> racine;
+    std::vector<Light> lights;
 
     Scene(){racine = std::make_shared<SNode>();}
 
