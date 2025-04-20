@@ -353,11 +353,12 @@ class SNode{
 public:
     Transform transform;
     std::vector<std::shared_ptr<SNode>> feuilles;
-    GLuint vao = 0, vbo = 0, ibo = 0, textureID = 0, nomalsID = 0, roughnessID = 0, metalnessID = 0, aoID = 0;
+    GLuint vao = 0, vbo = 0, ibo = 0, textureID = 0, normalsID = 0, roughnessID = 0, metalnessID = 0, aoID = 0;
     GLuint uvVBO = 0;
     size_t indexCPT = 0;
     glm::vec3 color;
     int type_objet = 0;
+    int isPBR = 0;
 
     const char* low;
     const char* high;
@@ -385,8 +386,9 @@ public:
     ){
         type_objet = obj;
         buffers();
+        isPBR = 1;
         textureID = loadTexture(texturePathAlbedo);
-        nomalsID = loadTexture(texturePathNormals);
+        normalsID = loadTexture(texturePathNormals);
         roughnessID = loadTexture(texturePathRoughness);
         metalnessID = loadTexture(texturePathMetalness);
         aoID = loadTexture(texturePathAO);
@@ -525,7 +527,7 @@ public:
         glUniform1i(isColorID,(type_objet == 4) ? 1 : 0);
 
         GLuint colorLocation = glGetUniformLocation(shaderProgram,"objColor");
-        std::cout << "couleur :" << color[0] << std::endl;
+        // std::cout << "couleur :" << color[0] << std::endl;
         glUniform3fv(colorLocation,1,&color[0]);
 
         glActiveTexture(GL_TEXTURE0);
@@ -535,6 +537,44 @@ public:
             std::cerr << "Erreur : Uniform texture1 introuvable" << std::endl;
         }
         glUniform1i(textureLocation,0);
+
+        GLuint isPBRID = glGetUniformLocation(shaderProgram,"isPBR");
+        // std::cout<<"isPBR : "<<isPBR<<std::endl;
+        glUniform1i(isPBRID, isPBR);
+
+        if(isPBR == 1){
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, normalsID);
+            GLuint normalsLocation = glGetUniformLocation(shaderProgram,"normalMap");
+            if(normalsLocation == -1){
+                std::cerr << "Erreur : Uniform normalMap introuvable" << std::endl;
+            }
+            glUniform1i(normalsLocation,1);
+
+            glActiveTexture(GL_TEXTURE2);
+            glBindTexture(GL_TEXTURE_2D, roughnessID);
+            GLuint roughnessLocation = glGetUniformLocation(shaderProgram,"roughnessMap");
+            if(roughnessLocation == -1){
+                std::cerr << "Erreur : Uniform roughnessMap introuvable" << std::endl;
+            }
+            glUniform1i(roughnessLocation,2);
+
+            glActiveTexture(GL_TEXTURE3);
+            glBindTexture(GL_TEXTURE_2D, metalnessID);
+            GLuint metalnessLocation = glGetUniformLocation(shaderProgram,"metalnessMap");
+            if(metalnessLocation == -1){
+                std::cerr << "Erreur : Uniform metalnessMap introuvable" << std::endl;
+            }
+            glUniform1i(metalnessLocation,3);
+
+            glActiveTexture(GL_TEXTURE4);
+            glBindTexture(GL_TEXTURE_2D, aoID);
+            GLuint aoLocation = glGetUniformLocation(shaderProgram,"aoMap");
+            if(aoLocation == -1){
+                std::cerr << "Erreur : Uniform aoMap introuvable" << std::endl;
+            }
+            glUniform1i(aoLocation,4);
+        }
 
         glBindVertexArray(vao);
         glEnableVertexAttribArray(0);
@@ -580,6 +620,40 @@ public:
     void draw(GLuint shaderProgram){
         racine->draw(shaderProgram,glm::mat4(1.0f),glm::vec3(0.0f));
     }
+
+    std::vector<glm::vec3> get_lights_pos(){
+        std::vector<glm::vec3> lp;
+        for(int i = 0; i<lights.size(); i++){
+            lp.push_back(lights[i].position);
+        }
+        return lp;
+    }
+
+    void add_light(glm::vec3 light_position){
+
+        if(lights.size() >= 10){
+            std::cout<<"Trop de lights !"<<std::endl;
+            return;
+        }
+
+        Light light(light_position);
+        lights.push_back(light);
+        std::vector<glm::vec3> l = get_lights_pos();
+
+        GLuint nbLightsID = glGetUniformLocation(programID, "nbLights");
+        glUniform1i(nbLightsID, lights.size());
+
+        std::vector<GLfloat> flat_data;
+        flat_data.reserve(l.size() * 3);
+        for (const auto& vec : l) {
+            flat_data.push_back(vec.x);
+            flat_data.push_back(vec.y);
+            flat_data.push_back(vec.z);
+        }
+
+        GLuint lightsPosID = glGetUniformLocation(programID, "lightsPos");
+        glUniform3fv(lightsPosID, static_cast<GLsizei>(l.size()), flat_data.data());
+    }
 };
 
 float gethauteur(std::shared_ptr<Scene> scene,glm::vec3 cube_pos){
@@ -603,22 +677,6 @@ float gethauteur(std::shared_ptr<Scene> scene,glm::vec3 cube_pos){
         }
     }
     return hauteurMax;
-}
-
-float GeometrySchlickGGX(float NdotV, float k){
-    float nom   = NdotV;
-    float denom = NdotV * (1.0 - k) + k;
-	
-    return nom / denom;
-}
-  
-float GeometrySmith(vec3 N, vec3 V, vec3 L, float k){
-    float NdotV = std::max((double)glm::dot(N,V),0.0);
-    float NdotL = std::max((double)glm::dot(N,L),0.0);
-    float ggx1 = GeometrySchlickGGX(NdotV,k);
-    float ggx2 = GeometrySchlickGGX(NdotL,k);
-	
-    return ggx1 * ggx2;
 }
 
 /*******************************************************************************/
@@ -697,11 +755,11 @@ int main( void ){
     glUseProgram(programID);
     GLuint LightID = glGetUniformLocation(programID, "LightPosition_worldspace");
 
-    glActiveTexture(GL_TEXTURE3);
+    glActiveTexture(GL_TEXTURE6);
     GLuint heightmapTexture = loadTexture("textures/heightmap-1024x1024.png");
     glBindTexture(GL_TEXTURE_2D,heightmapTexture);
     GLuint heightmapID = glGetUniformLocation(programID,"heightmap");
-    glUniform1i(heightmapID, 3);
+    glUniform1i(heightmapID, 6);
 
     GLuint heightScaleID = glGetUniformLocation(programID,"heightScale");
     glUniform1f(heightScaleID,1.0f);
@@ -717,7 +775,11 @@ int main( void ){
     // std::shared_ptr<SNode> cube = std::make_shared<SNode>(3,"textures/rock.png");
     std::shared_ptr<SNode> cube = std::make_shared<SNode>(4,vec3(1.0,0.1,0.2));
     // std::shared_ptr<SNode> cube = std::make_shared<SNode>(4,glm::vec3(1.0,0.0,0.0));
-    std::shared_ptr<SNode> soleil = std::make_shared<SNode>(0,"textures/s2.png"); // Sans LOD
+    std::shared_ptr<SNode> soleil = std::make_shared<SNode>(0,"textures/test_sphere_albedo.png",
+    "textures/test_sphere_normal_map.png", 
+    "textures/test_sphere_roughness.png", 
+    "textures/test_sphere_metalness.png",
+    "textures/test_sphere_ao.png"); // Sans LOD
     // std::shared_ptr<SNode> soleil = std::make_shared<SNode>(
     //     2,
     //     "textures/s2.png",
@@ -736,6 +798,7 @@ int main( void ){
     scene->racine->addFeuille(mur);
     scene->racine->addFeuille(plan);
     scene->racine->addFeuille(plan2);
+    scene->add_light(glm::vec3(10., 10., 10.));
 
     soleil->transform.position = glm::vec3(-1.0f,5.0f,1.0f);
     tronc->transform.position = glm::vec3(0.0f,0.0f, 0.0f);
@@ -808,6 +871,9 @@ int main( void ){
 
         scene->draw(programID);
         scene->update(deltaTime);
+
+        GLuint camPosID = glGetUniformLocation(programID,"camPos");
+        glUniform3fv(camPosID, 1, &camera_position[0]);
 
         // Swap buffers
         glfwSwapBuffers(window);
