@@ -775,10 +775,10 @@ int main( void ){
     // std::shared_ptr<SNode> cube = std::make_shared<SNode>(3,"textures/rock.png");
     std::shared_ptr<SNode> cube = std::make_shared<SNode>(4,vec3(1.0,0.1,0.2));
     // std::shared_ptr<SNode> cube = std::make_shared<SNode>(4,glm::vec3(1.0,0.0,0.0));
-    std::shared_ptr<SNode> soleil = std::make_shared<SNode>(0,"textures/test_sphere_albedo.png",
-    "textures/test_sphere_normal_map.png", 
-    "textures/test_sphere_roughness.png", 
-    "textures/test_sphere_metalness.png",
+    std::shared_ptr<SNode> soleil = std::make_shared<SNode>(0,"textures/rustediron2_basecolor.png",
+    "textures/rustediron2_normal.png", 
+    "textures/rustediron2_roughness.png", 
+    "textures/rustediron2_metallic.png",
     "textures/test_sphere_ao.png"); // Sans LOD
     // std::shared_ptr<SNode> soleil = std::make_shared<SNode>(
     //     2,
@@ -798,7 +798,7 @@ int main( void ){
     scene->racine->addFeuille(mur);
     scene->racine->addFeuille(plan);
     scene->racine->addFeuille(plan2);
-    scene->add_light(glm::vec3(10., 10., 10.));
+    scene->add_light(glm::vec3(1., 1., 1.));
 
     soleil->transform.position = glm::vec3(-1.0f,5.0f,1.0f);
     tronc->transform.position = glm::vec3(0.0f,0.0f, 0.0f);
