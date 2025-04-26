@@ -70,6 +70,7 @@ float pitch_ = 0.0f;
 double _xCursorPos, _yCursorPos;
 int nPreviousState = GLFW_RELEASE;
 int fPreviousState = GLFW_RELEASE;
+float cam_distance = 10.0f;
 
 glm::vec3 jump_limit = glm::vec3(0.0f,11.0f,0.0f);
 bool isJumping = false;
@@ -817,6 +818,7 @@ int main( void ){
     scene->racine->addFeuille(plan);
     scene->racine->addFeuille(plan2);
     scene->add_light(glm::vec3(1., 1., 1.));
+    scene->add_light(glm::vec3(cube->transform.position));
 
     soleil->transform.position = glm::vec3(-1.0f,5.0f,1.0f);
     tronc->transform.position = glm::vec3(0.0f,0.0f, 0.0f);
@@ -849,7 +851,7 @@ int main( void ){
         // -----
         processInput(window,cube);
 
-    
+        scene->lights[1].position = cube->transform.position;
 
         float plan_hauteur = gethauteur(scene,cube->transform.position);
         // std::cout << "hauteur :" << plan_hauteur << std::endl;
@@ -972,14 +974,16 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> cube){
         front.z = sin(glm::radians(yaw_)) * cos(glm::radians(pitch_));
         camera_target = glm::normalize(front);
     }else{
+        glm::vec3 right = glm::normalize(glm::cross(camera_target, glm::vec3(0.0, 1.0, 0.0)));
+        glm::vec3 forward = glm::normalize(glm::cross(right, glm::vec3(0.0, 1.0, 0.0)));
         if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-            cube->transform.position += glm::vec3(camera_target[0], 0.0, camera_target[2]) * 10.0f * deltaTime;
+            cube->transform.position -= forward * 10.0f * deltaTime;
         if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-            cube->transform.position -= glm::vec3(camera_target[0], 0.0, camera_target[2]) * 10.0f * deltaTime;
+            cube->transform.position += forward * 10.0f * deltaTime;
         if(glfwGetKey(window,GLFW_KEY_A) == GLFW_PRESS)
-            cube->transform.position -= glm::normalize(glm::cross(camera_target,glm::vec3(0.0, 1.0, 0.0))) * 10.0f * deltaTime;
+            cube->transform.position -= right * 10.0f * deltaTime;
         if(glfwGetKey(window,GLFW_KEY_D) == GLFW_PRESS)
-            cube->transform.position += glm::normalize(glm::cross(camera_target,glm::vec3(0.0, 1.0, 0.0))) * 10.0f * deltaTime;
+            cube->transform.position += right * 10.0f * deltaTime;
 
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         int width, height;
@@ -1000,12 +1004,17 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> cube){
 
         yaw_ = ClipAngle180(yaw_);
 
-        float distance = 10.0f;
+        
+        if(glfwGetKey(window,GLFW_KEY_Q) == GLFW_PRESS)
+            cam_distance += 1. * deltaTime;
+        if(glfwGetKey(window,GLFW_KEY_E) == GLFW_PRESS)
+            cam_distance -= 1. * deltaTime;
+
 
         glm::vec3 offset;
-        offset.x = distance * cos(glm::radians(pitch_)) * cos(glm::radians(yaw_));
-        offset.y = distance * sin(glm::radians(pitch_));
-        offset.z = distance * cos(glm::radians(pitch_)) * sin(glm::radians(yaw_));
+        offset.x = cam_distance * cos(glm::radians(pitch_)) * cos(glm::radians(yaw_));
+        offset.y = cam_distance * sin(glm::radians(pitch_));
+        offset.z = cam_distance * cos(glm::radians(pitch_)) * sin(glm::radians(yaw_));
 
         camera_position = cube->transform.position + offset;
 

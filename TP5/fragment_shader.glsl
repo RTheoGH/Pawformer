@@ -102,11 +102,11 @@ void main(){
                         vec3 H = normalize(V + L);
                         float distance    = length(lightsPos[i] - fragPos);
                         float attenuation = 1.0 / (distance * distance);
-                        vec3 radiance     = vec3(1.0) * attenuation;        
+                        vec3 radiance     = vec3(1.0);        
                         
                         // cook-torrance brdf
                         float NDF = DistributionGGX(N, H, roughness);        
-                        float G   = GeometrySmith(N, V, L, roughness);      
+                        float G   = GeometrySmith(N, V, L, roughness);
                         vec3 F    = fresnelSchlick(max(dot(H, V), 0.0), F0);       
                         
                         vec3 kS = F;
@@ -118,15 +118,16 @@ void main(){
                         vec3 specular     = numerator / denominator;  
                         
                         // add to outgoing radiance Lo
-                        float NdotL = max(dot(N, L), 0.0);                
-                        Lo += (kD * albedo / PI + specular) * NdotL; 
+                        float NdotL = max(dot(N, L), 0.2);                
+                        Lo += (kD * albedo / PI + specular) * radiance * NdotL; 
                 }   
                 
                 vec3 ambient = vec3(0.03) * albedo * ao;
                 vec3 color = ambient + Lo;
                         
                 color_temp = color_temp / (color_temp + vec3(1.0));
-                color_temp = pow(color, vec3(1.0/2.2));  
+                color_temp = pow(color, vec3(1.0/2.2)); 
+                color_temp *= 2.0;
                 
         }
 
