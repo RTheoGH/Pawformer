@@ -19,6 +19,7 @@ GLFWwindow* window;
 
 // Include GLM
 #include <glm/glm.hpp>
+#include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 
@@ -63,9 +64,12 @@ glm::mat4 MVP;
 
 bool debugFilaire = false;
 
-bool cam_attache = false;
+bool cam_attache = true;
 float yaw_ = -90.0f;
 float pitch_ = 0.0f;
+double _xCursorPos, _yCursorPos;
+int nPreviousState = GLFW_RELEASE;
+int fPreviousState = GLFW_RELEASE;
 
 glm::vec3 jump_limit = glm::vec3(0.0f,11.0f,0.0f);
 bool isJumping = false;
@@ -682,6 +686,20 @@ float gethauteur(std::shared_ptr<Scene> scene,glm::vec3 cube_pos){
 /*******************************************************************************/
 
 void processInput(GLFWwindow *window,std::shared_ptr<SNode> soleil);
+bool input_toggle(int pressed_key, int &previous_state_key, bool &toggle_bool){
+    bool is_toggled = glfwGetKey(window, pressed_key) == GLFW_PRESS && previous_state_key ==  GLFW_RELEASE;
+    if(is_toggled){
+		toggle_bool = !toggle_bool;
+		previous_state_key = GLFW_PRESS;
+	}
+	else if(glfwGetKey(window, pressed_key) == GLFW_PRESS){
+		previous_state_key = GLFW_PRESS;
+	}
+	else{
+		previous_state_key = GLFW_RELEASE;
+	}
+    return is_toggled;
+}
 
 int main( void ){
     // Initialise GLFW
@@ -831,10 +849,7 @@ int main( void ){
         // -----
         processInput(window,cube);
 
-        if(cam_attache){
-            camera_position = cube->transform.position + glm::vec3(0.0f,0.0f,10.0f); 
-            // camera_target = cube->transform.position + glm::vec3(0.0f, 0.0f, 1.0f);
-        }
+    
 
         float plan_hauteur = gethauteur(scene,cube->transform.position);
         // std::cout << "hauteur :" << plan_hauteur << std::endl;
@@ -893,6 +908,15 @@ int main( void ){
     return 0;
 }
 
+float ClipAngle180(float _angle){
+	float _clippedAngle = _angle;
+	if(_angle > 180.0f)
+		_clippedAngle = _angle-360.0f;
+	if(_angle < -180.0f)
+		_clippedAngle = _angle+360.0f;
+	return _clippedAngle;
+}
+
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
 void processInput(GLFWwindow *window, std::shared_ptr<SNode> cube){
@@ -901,12 +925,17 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> cube){
 
     float cameraSpeed = 5.0 * deltaTime;
 
-    if(glfwGetKey(window,GLFW_KEY_F) == GLFW_PRESS)
-        debugFilaire = !debugFilaire;
-    if(glfwGetKey(window,GLFW_KEY_N) == GLFW_PRESS)
-        cam_attache = !cam_attache;
+
+    input_toggle(GLFW_KEY_F, fPreviousState, debugFilaire);
+    if(input_toggle(GLFW_KEY_N, nPreviousState, cam_attache) && !cam_attache){
+        camera_position = glm::vec3(1.0, 1.0, 1.0);
+        camera_target = glm::vec3(0.0, 0.0, 0.0);
+        std::cout<<camera_position[0]<<", "<<camera_position[1]<<std::endl;
+    }
+        
 
     if(!cam_attache){
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         if(glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
                 camera_position += cameraSpeed * camera_target;
         if(glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS)
@@ -935,14 +964,57 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> cube){
         if (pitch_ < -89.0f)
             pitch_ = -89.0f;
 
+        yaw_ = ClipAngle180(yaw_);
+
         glm::vec3 front;
         front.x = cos(glm::radians(yaw_)) * cos(glm::radians(pitch_));
         front.y = sin(glm::radians(pitch_));
         front.z = sin(glm::radians(yaw_)) * cos(glm::radians(pitch_));
         camera_target = glm::normalize(front);
     }else{
-        camera_target = glm::vec3(0.0f, 0.0f, -1.0f);
+        if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            cube->transform.position += glm::vec3(camera_target[0], 0.0, camera_target[2]) * 10.0f * deltaTime;
+        if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            cube->transform.position -= glm::vec3(camera_target[0], 0.0, camera_target[2]) * 10.0f * deltaTime;
+        if(glfwGetKey(window,GLFW_KEY_A) == GLFW_PRESS)
+            cube->transform.position -= glm::normalize(glm::cross(camera_target,glm::vec3(0.0, 1.0, 0.0))) * 10.0f * deltaTime;
+        if(glfwGetKey(window,GLFW_KEY_D) == GLFW_PRESS)
+            cube->transform.position += glm::normalize(glm::cross(camera_target,glm::vec3(0.0, 1.0, 0.0))) * 10.0f * deltaTime;
+
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        int width, height;
+        glfwGetWindowSize(window, &width, &height);
+        glfwGetCursorPos(window, &_xCursorPos, &_yCursorPos);
+
+        float xDeltaPos = _xCursorPos - width / 2;
+        float yDeltaPos = _yCursorPos - height / 2;
+
+        float sensitivity = 0.1f;
+        yaw_ += xDeltaPos * sensitivity;
+        pitch_ += yDeltaPos * sensitivity;
+
+        if (pitch_ > 89.0f)
+            pitch_ = 89.0f;
+        if (pitch_ < -89.0f)
+            pitch_ = -89.0f;
+
+        yaw_ = ClipAngle180(yaw_);
+
+        float distance = 10.0f;
+
+        glm::vec3 offset;
+        offset.x = distance * cos(glm::radians(pitch_)) * cos(glm::radians(yaw_));
+        offset.y = distance * sin(glm::radians(pitch_));
+        offset.z = distance * cos(glm::radians(pitch_)) * sin(glm::radians(yaw_));
+
+        camera_position = cube->transform.position + offset;
+
+        camera_target = glm::normalize(cube->transform.position - camera_position);
+
+        glfwSetCursorPos(window, width / 2, height / 2);
     }
+
+
     
     
     // if(glfwGetKey(window,GLFW_KEY_N) == GLFW_PRESS)
@@ -978,3 +1050,4 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
 }
+
