@@ -72,7 +72,7 @@ int nPreviousState = GLFW_RELEASE;
 int fPreviousState = GLFW_RELEASE;
 float cam_distance = 10.0f;
 
-glm::vec3 jump_limit = glm::vec3(0.0f,11.0f,0.0f);
+float jump_height = 11.0f;
 bool isJumping = false;
 bool isFalling = false;
 
@@ -838,6 +838,8 @@ int main( void ){
     glm::vec3 acceleration = glm::vec3(0.0f,-gravite,0.0f);
     glm::vec3 vitesse = glm::vec3(0.0f,0.0f,0.0f);
 
+    float plan_hauteur = gethauteur(scene,cube->transform.position);
+
     do{
         // Measure speed
         // per-frame time logic
@@ -853,7 +855,8 @@ int main( void ){
 
         scene->lights[1].position = cube->transform.position;
 
-        float plan_hauteur = gethauteur(scene,cube->transform.position);
+        if(!isJumping) plan_hauteur = gethauteur(scene, cube->transform.position);
+
         // std::cout << "hauteur :" << plan_hauteur << std::endl;
 
         if(isJumping){
@@ -868,8 +871,8 @@ int main( void ){
                 isFalling = false;
             }
         }
-        // std::cout << "(pos.y | plan+jump)" << cube->transform.position.y << " | " << plan_hauteur+jump_limit.y << std::endl;
-        if (cube->transform.position.y > plan_hauteur + jump_limit.y){
+        // std::cout << "(pos.y | plan+jump)" << cube->transform.position.y << " | " << plan_hauteur+jump_height.y << std::endl;
+        if (cube->transform.position.y > plan_hauteur + jump_height){
             isJumping = false;
             isFalling = true;
         }
@@ -1072,7 +1075,6 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> cube){
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !isJumping && !isFalling){
         isJumping = true;
         cube->transform.position.y += deltaTime;
-        jump_limit = cube->transform.position + glm::vec3(0., 11., 0.);
     } 
 }
 
