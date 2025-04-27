@@ -822,7 +822,7 @@ int main( void ){
 
     soleil->transform.position = glm::vec3(-1.0f,5.0f,1.0f);
     tronc->transform.position = glm::vec3(0.0f,0.0f, 0.0f);
-    cube->transform.position = glm::vec3(-1.0f,0.5f,-1.0f);
+    cube->transform.position = glm::vec3(-1.0f,0.75f,-1.0f);
     plan2->transform.position = glm::vec3(0.0f,9.65f,-9.65f);
     mur->transform.position = glm::vec3(0.0f,0.0f,-5.0f);
 
@@ -857,14 +857,14 @@ int main( void ){
         // std::cout << "hauteur :" << plan_hauteur << std::endl;
 
         if(isJumping){
-            cube->transform.position.y += deltaTime * 16.0f;
+            cube->transform.position.y += deltaTime * 22.0f;
             vitesse += acceleration * deltaTime;
         }else{
             isFalling = true;
-            cube->transform.position.y -= vitesse.length() * deltaTime * 6;
+            cube->transform.position.y -= vitesse.length() * deltaTime * 11;
 
-            if (cube->transform.position.y < plan_hauteur) {
-                cube->transform.position.y = plan_hauteur;
+            if (cube->transform.position.y < plan_hauteur + 0.35) {
+                cube->transform.position.y = plan_hauteur + 0.35;
                 isFalling = false;
             }
         }
@@ -976,14 +976,39 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> cube){
     }else{
         glm::vec3 right = glm::normalize(glm::cross(camera_target, glm::vec3(0.0, 1.0, 0.0)));
         glm::vec3 forward = glm::normalize(glm::cross(right, glm::vec3(0.0, 1.0, 0.0)));
-        if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-            cube->transform.position -= forward * 10.0f * deltaTime;
-        if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-            cube->transform.position += forward * 10.0f * deltaTime;
-        if(glfwGetKey(window,GLFW_KEY_A) == GLFW_PRESS)
-            cube->transform.position -= right * 10.0f * deltaTime;
-        if(glfwGetKey(window,GLFW_KEY_D) == GLFW_PRESS)
-            cube->transform.position += right * 10.0f * deltaTime;
+
+        glm::vec3 mouvement = glm::vec3(0.0f);
+
+        if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS){
+            // cube->transform.position -= forward * 10.0f * deltaTime;
+            mouvement -= forward;
+        }
+        if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS){
+            // cube->transform.position += forward * 10.0f * deltaTime;
+            mouvement += forward;
+        }
+        if(glfwGetKey(window,GLFW_KEY_A) == GLFW_PRESS){
+            // cube->transform.position -= right * 10.0f * deltaTime;
+            mouvement -= right;
+        }
+        if(glfwGetKey(window,GLFW_KEY_D) == GLFW_PRESS){
+            // cube->transform.position += right * 10.0f * deltaTime;
+            mouvement += right;
+        }
+
+        if (glm::length(mouvement) > 0.0f) {
+            // Normaliser le vecteur de mouvement
+            mouvement = glm::normalize(mouvement);
+        
+            // Mettre à jour la position du cube
+            cube->transform.position += mouvement * 10.0f * deltaTime;
+        
+            // Calculer l'angle de rotation autour de l'axe Y en fonction de la direction de mouvement
+            float rotationY = atan2(mouvement.x, mouvement.z);
+        
+            // Appliquer la rotation au cube
+            cube->transform.rotation.y = rotationY;
+        }
 
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         int width, height;
