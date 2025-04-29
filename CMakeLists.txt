@@ -3,6 +3,10 @@ cmake_minimum_required (VERSION 3.0)
 project (Tutorials)
 
 find_package(OpenGL REQUIRED)
+find_library(OPENAL_LIBRARY NAMES openal)
+find_library(ALUT_LIBRARY NAMES alut)
+
+include_directories(/usr/include/AL)
 
 
 if( CMAKE_BINARY_DIR STREQUAL CMAKE_SOURCE_DIR )
@@ -72,6 +76,8 @@ add_executable(TP5
 )
 target_link_libraries(TP5
 	${ALL_LIBS}
+	${OPENAL_LIBRARY}
+	${ALUT_LIBRARY}
 )
 # Xcode and Visual working directories
 set_target_properties(TP5 PROPERTIES XCODE_ATTRIBUTE_CONFIGURATION_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/TP5/")

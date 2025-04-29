@@ -23,6 +23,10 @@ GLFWwindow* window;
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 
+#include <AL/al.h>
+#include <AL/alc.h>
+#include <AL/alut.h>
+
 using namespace glm;
 
 #include <common/shader.hpp>
@@ -83,6 +87,9 @@ double poids = masse_chat*gravite;
 
 bool PBR_OnOff = false;
 int p_preview_state = GLFW_RELEASE;
+
+bool oiia = false;
+int o_p_s = GLFW_RELEASE;
 
 /*******************************************************************************/
 
@@ -700,7 +707,7 @@ float gethauteur(std::shared_ptr<Scene> scene,std::shared_ptr<SNode> chat){
 
 /*******************************************************************************/
 
-void processInput(GLFWwindow *window,std::shared_ptr<SNode> soleil);
+void processInput(GLFWwindow *window,std::shared_ptr<SNode> soleil,ALuint source);
 bool input_toggle(int pressed_key, int &previous_state_key, bool &toggle_bool){
     bool is_toggled = glfwGetKey(window, pressed_key) == GLFW_PRESS && previous_state_key ==  GLFW_RELEASE;
     if(is_toggled){
@@ -770,6 +777,12 @@ int main( void ){
 
     // Cull triangles which normal is not towards the camera
     //glEnable(GL_CULL_FACE);
+
+    alutInit(0, NULL);
+    ALuint buffer = alutCreateBufferFromFile("assets/OIIAOIIA.wav");
+    ALuint source;
+    alGenSources(1, &source);
+    alSourcei(source, AL_BUFFER, buffer);
 
     GLuint VertexArrayID;
     glGenVertexArrays(1, &VertexArrayID);
@@ -867,7 +880,12 @@ int main( void ){
 
         // input
         // -----
-        processInput(window,chat);
+        processInput(window,chat,source);
+
+        if(oiia){
+            chat->transform.rotation += glm::vec3(0.0f,1.0f,0.0f) * (deltaTime*12);
+            chat->transform.position.y += deltaTime*10;
+        }
 
         GLuint PBRID = glGetUniformLocation(programID,"PBR_OnOff");
         glUniform1i(PBRID,(PBR_OnOff) ? 1 : 0);
@@ -928,6 +946,10 @@ int main( void ){
     glDeleteProgram(programID);
     glDeleteVertexArrays(1,&VertexArrayID);
 
+    alDeleteSources(1, &source);
+    alDeleteBuffers(1, &buffer);
+    alutExit();
+
     // Close OpenGL window and terminate GLFW
     glfwTerminate();
     return 0;
@@ -944,7 +966,7 @@ float ClipAngle180(float _angle){
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window, std::shared_ptr<SNode> chat){
+void processInput(GLFWwindow *window, std::shared_ptr<SNode> chat,ALuint source){
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
@@ -1033,6 +1055,17 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> chat){
             // Appliquer la rotation au chat
             chat->transform.rotation.y = rotationY;
         }
+
+        if(input_toggle(GLFW_KEY_O,o_p_s,oiia)){
+            if(oiia == true){
+                alSourcePlay(source);
+            }
+        };
+
+        // if(glfwGetKey(window,GLFW_KEY_O) == GLFW_PRESS){
+        //     oiia = !oiia;
+        //     std::cout << oiia << std::endl;
+        // }
 
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         int width, height;
