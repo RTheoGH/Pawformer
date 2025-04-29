@@ -60,6 +60,7 @@ float rotation_speed = 0.5f;
 
 GLuint programID;
 GLuint MatrixID;
+GLuint ModelID;
 glm::mat4 MVP;
 
 bool debugFilaire = false;
@@ -357,11 +358,59 @@ public:
     }
 };
 
+void computeTangentsFromMesh(
+    const std::vector<glm::vec3>& vertices,
+    const std::vector<glm::vec2>& uvs,
+    const std::vector<unsigned short>& indices,
+    std::vector<glm::vec3> &tangents)
+{
+    tangents.resize(vertices.size(), glm::vec3(0.0f));
+
+    for (size_t i = 0; i < indices.size(); i += 3) {
+        unsigned int i0 = indices[i];
+        unsigned int i1 = indices[i + 1];
+        unsigned int i2 = indices[i + 2];
+
+        const glm::vec3& v0 = vertices[i0];
+        const glm::vec3& v1 = vertices[i1];
+        const glm::vec3& v2 = vertices[i2];
+
+        const glm::vec2& uv0 = uvs[i0];
+        const glm::vec2& uv1 = uvs[i1];
+        const glm::vec2& uv2 = uvs[i2];
+
+        glm::vec3 edge1 = v1 - v0;
+        glm::vec3 edge2 = v2 - v0;
+        glm::vec2 deltaUV1 = uv1 - uv0;
+        glm::vec2 deltaUV2 = uv2 - uv0;
+
+        float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+        glm::vec3 tangent;
+        tangent.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+        tangent.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+        tangent.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+        tangent = glm::normalize(tangent);
+
+        tangents[i0] += tangent;
+        tangents[i1] += tangent;
+        tangents[i2] += tangent;
+
+    }
+
+    // Normalisation finale
+    for (glm::vec3& t : tangents) {
+        t = glm::normalize(t);
+    }
+}
+
+
+
 class SNode{
 public:
     Transform transform;
     std::vector<std::shared_ptr<SNode>> feuilles;
-    GLuint vao = 0, vbo = 0, ibo = 0, textureID = 0, normalsID = 0, roughnessID = 0, metalnessID = 0, aoID = 0;
+    GLuint vao = 0, vbo = 0, ibo = 0, tangentVBO = 0, textureID = 0, normalsID = 0, roughnessID = 0, metalnessID = 0, aoID = 0;
     GLuint uvVBO = 0;
     size_t indexCPT = 0;
     glm::vec3 color;
@@ -376,6 +425,7 @@ public:
     std::vector<glm::vec2> uvs;
     std::vector<unsigned short> indices;
     std::vector<glm::vec3> normals;
+    std::vector<glm::vec3> tangents;
     std::vector<std::vector<unsigned short>> triangles;
 
     // Constructeurs
@@ -444,6 +494,7 @@ public:
             default:
                 loadOFF("modeles/sphere2.off",vertices,indices,triangles);
                 calculateUVSphere(vertices,uvs);
+                computeTangentsFromMesh(vertices, uvs, indices, tangents);
                 break;
         }
 
@@ -482,6 +533,14 @@ public:
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
             glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned short), &indices[0], GL_STATIC_DRAW);
         }
+
+        if (hasTangeants()) {
+            glGenBuffers(1, &tangentVBO);
+            glBindBuffer(GL_ARRAY_BUFFER, tangentVBO);
+            glBufferData(GL_ARRAY_BUFFER, tangents.size() * sizeof(glm::vec3), tangents.data(), GL_STATIC_DRAW);
+            glEnableVertexAttribArray(3);
+            glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+        } 
 
         indexCPT = indices.size();
         glBindVertexArray(0);
@@ -529,6 +588,7 @@ public:
         );
 
         MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
+        if(type_objet == 0) glUniformMatrix4fv(ModelID,1,GL_FALSE,&ModelMatrix[0][0]);
         glUniformMatrix4fv(MatrixID,1,GL_FALSE,&MVP[0][0]);
 
         GLuint isColorID = glGetUniformLocation(shaderProgram,"isColor");
@@ -611,6 +671,11 @@ public:
     
     bool hasIndices() const {
         return !indices.empty();
+    }
+
+    bool hasTangeants() const {
+        std::cout<<!tangents.empty()<<std::endl;
+        return !tangents.empty();
     }
 }; 
 
@@ -781,7 +846,7 @@ int main( void ){
     /****************************************/
     // Get a handle for our "Model View Projection" matrices uniforms
     MatrixID = glGetUniformLocation(programID,"MVP");
-
+    ModelID = glGetUniformLocation(programID, "model");
     /****************************************/
 
     // Get a handle for our "LightPosition" uniform
