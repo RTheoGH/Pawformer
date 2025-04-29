@@ -81,6 +81,9 @@ double masse_cube = 2.0f;
 
 double poids = masse_cube*gravite;
 
+bool PBR_OnOff = false;
+int p_preview_state = GLFW_RELEASE;
+
 /*******************************************************************************/
 
 // Chargeur de texture
@@ -853,6 +856,9 @@ int main( void ){
         // -----
         processInput(window,cube);
 
+        GLuint PBRID = glGetUniformLocation(programID,"PBR_OnOff");
+        glUniform1i(PBRID,(PBR_OnOff) ? 1 : 0);
+
         scene->lights[1].position = cube->transform.position;
 
         if(!isJumping) plan_hauteur = gethauteur(scene, cube->transform.position);
@@ -938,6 +944,7 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> cube){
         std::cout<<camera_position[0]<<", "<<camera_position[1]<<std::endl;
     }
         
+    input_toggle(GLFW_KEY_P,p_preview_state,PBR_OnOff);
 
     if(!cam_attache){
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);

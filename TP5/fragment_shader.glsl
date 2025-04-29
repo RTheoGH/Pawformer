@@ -17,7 +17,7 @@ uniform vec3 camPos;
 uniform int nbLights;
 uniform vec3 lightsPos[10];
 const float PI = 3.14159265359;
-
+uniform int PBR_OnOff;
 vec3 fresnelSchlick(float cosTheta, vec3 F0)
 {
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
@@ -81,7 +81,7 @@ void main(){
                 color_temp = texture(texture1,UV).rgb;
         }
 
-        if(isPBR == 1){
+        if(isPBR == 1 && PBR_OnOff == 1){
                 vec3 N = normalize(normal);
                 vec3 V = normalize(camPos - fragPos);
 
