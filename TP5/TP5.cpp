@@ -77,9 +77,9 @@ bool isJumping = false;
 bool isFalling = false;
 
 double gravite = 10.0f;
-double masse_cube = 2.0f;
+double masse_chat = 2.0f;
 
-double poids = masse_cube*gravite;
+double poids = masse_chat*gravite;
 
 bool PBR_OnOff = false;
 int p_preview_state = GLFW_RELEASE;
@@ -664,22 +664,33 @@ public:
     }
 };
 
-float gethauteur(std::shared_ptr<Scene> scene,glm::vec3 cube_pos){
-    float hauteurMax = -1000.0f;
+float gethauteur(std::shared_ptr<Scene> scene,std::shared_ptr<SNode> chat){
+    float hauteurMax = -1.0f;
     std::shared_ptr<SNode> maxPlan;
+    glm::vec3 position_chat = chat->transform.position;
+
     for(const std::shared_ptr<SNode>& plan: scene->racine->feuilles){
-        if(plan->type_objet == 1){
+        if(plan->type_objet == 1 || plan->type_objet == 3){
             float planX = plan->transform.position.x;
             float planZ = plan->transform.position.z;
-            float largeur = 5.0f;
-            float longueur = 5.0f;
+            float largeur;
+            float longueur;
+            if(plan->type_objet == 1){
+                largeur = 5.0f * plan->transform.scale[0];
+                longueur = 5.0f * plan->transform.scale[0];
+            }
+            if(plan->type_objet == 3){
+                largeur = plan->transform.scale[0];
+                longueur = plan->transform.scale[0];
+            }
 
-            if(cube_pos.x >= planX - largeur && cube_pos.x <= planX + largeur &&
-                cube_pos.z >= planZ - longueur && cube_pos.z<= planZ + longueur
+            if(position_chat.x >= planX - largeur && position_chat.x <= planX + largeur &&
+                position_chat.z >= planZ - longueur && position_chat.z<= planZ + longueur
             ){
 
-                if(plan->transform.position.y > hauteurMax && cube_pos.y > plan->transform.position.y){
-                    hauteurMax = plan->transform.position.y+0.5;
+                if(plan->transform.position.y > hauteurMax && position_chat.y > plan->transform.position.y){
+                    if(plan->type_objet == 1) hauteurMax = plan->transform.position.y - 0.15f;
+                    if(plan->type_objet == 3) hauteurMax = plan->transform.position.y + plan->transform.scale.y*0.5-0.15f;
                 }
             }
         }
@@ -795,7 +806,7 @@ int main( void ){
 
     // std::shared_ptr<SNode> cube = std::make_shared<SNode>(3,glm::vec3(1.0,0.0,0.0));
     // std::shared_ptr<SNode> cube = std::make_shared<SNode>(3,"textures/rock.png");
-    std::shared_ptr<SNode> cube = std::make_shared<SNode>(4,vec3(1.0,0.1,0.2));
+    std::shared_ptr<SNode> chat = std::make_shared<SNode>(4,vec3(1.0,0.1,0.2));
     // std::shared_ptr<SNode> cube = std::make_shared<SNode>(4,glm::vec3(1.0,0.0,0.0));
     std::shared_ptr<SNode> soleil = std::make_shared<SNode>(0,"textures/rustediron2_basecolor.png",
     "textures/rustediron2_normal.png", 
@@ -810,22 +821,23 @@ int main( void ){
 
     std::shared_ptr<SNode> jump;
     std::shared_ptr<SNode> plan = std::make_shared<SNode>(1,"textures/grass.png");
-    std::shared_ptr<SNode> plan2 = std::make_shared<SNode>(1,"textures/grass.png");
+    plan->transform.scale = glm::vec3(10.0f);
+    std::shared_ptr<SNode> plan2 = std::make_shared<SNode>(3,"textures/grass.png");
     std::shared_ptr<SNode> tronc = std::make_shared<SNode>(5,"textures/corde_texture.png");
     std::shared_ptr<SNode> mur = std::make_shared<SNode>(6,"textures/rock.png");
 
-    scene->racine->addFeuille(cube);
+    scene->racine->addFeuille(chat);
     scene->racine->addFeuille(soleil);
     scene->racine->addFeuille(tronc);
     scene->racine->addFeuille(mur);
     scene->racine->addFeuille(plan);
     scene->racine->addFeuille(plan2);
     scene->add_light(glm::vec3(1., 1., 1.));
-    scene->add_light(glm::vec3(cube->transform.position));
+    scene->add_light(glm::vec3(chat->transform.position));
 
     soleil->transform.position = glm::vec3(-1.0f,5.0f,1.0f);
     tronc->transform.position = glm::vec3(0.0f,0.0f, 0.0f);
-    cube->transform.position = glm::vec3(-1.0f,0.75f,-1.0f);
+    chat->transform.position = glm::vec3(-1.0f,2.0f,-1.0f);
     plan2->transform.position = glm::vec3(0.0f,9.65f,-9.65f);
     mur->transform.position = glm::vec3(0.0f,0.0f,-5.0f);
 
@@ -841,7 +853,7 @@ int main( void ){
     glm::vec3 acceleration = glm::vec3(0.0f,-gravite,0.0f);
     glm::vec3 vitesse = glm::vec3(0.0f,0.0f,0.0f);
 
-    float plan_hauteur = gethauteur(scene,cube->transform.position);
+    float plan_hauteur = gethauteur(scene,chat);
 
     do{
         // Measure speed
@@ -854,31 +866,32 @@ int main( void ){
 
         // input
         // -----
-        processInput(window,cube);
+        processInput(window,chat);
 
         GLuint PBRID = glGetUniformLocation(programID,"PBR_OnOff");
         glUniform1i(PBRID,(PBR_OnOff) ? 1 : 0);
 
-        scene->lights[1].position = cube->transform.position;
+        scene->lights[1].position = chat->transform.position;
 
-        if(!isJumping) plan_hauteur = gethauteur(scene, cube->transform.position);
+        float hauteur_chat = chat->transform.scale.y;
+        if(!isJumping) plan_hauteur = gethauteur(scene,chat);
 
         // std::cout << "hauteur :" << plan_hauteur << std::endl;
 
         if(isJumping){
-            cube->transform.position.y += deltaTime * 22.0f;
+            chat->transform.position.y += deltaTime * 22.0f;
             vitesse += acceleration * deltaTime;
         }else{
             isFalling = true;
-            cube->transform.position.y -= vitesse.length() * deltaTime * 11;
+            chat->transform.position.y -= vitesse.length() * deltaTime * 11;
 
-            if (cube->transform.position.y < plan_hauteur + 0.35) {
-                cube->transform.position.y = plan_hauteur + 0.35;
+            if (chat->transform.position.y < plan_hauteur + hauteur_chat) {
+                chat->transform.position.y = plan_hauteur + hauteur_chat;
                 isFalling = false;
             }
         }
         // std::cout << "(pos.y | plan+jump)" << cube->transform.position.y << " | " << plan_hauteur+jump_height.y << std::endl;
-        if (cube->transform.position.y > plan_hauteur + jump_height){
+        if (chat->transform.position.y > plan_hauteur + jump_height){
             isJumping = false;
             isFalling = true;
         }
@@ -930,7 +943,7 @@ float ClipAngle180(float _angle){
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window, std::shared_ptr<SNode> cube){
+void processInput(GLFWwindow *window, std::shared_ptr<SNode> chat){
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
@@ -1010,14 +1023,14 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> cube){
             // Normaliser le vecteur de mouvement
             mouvement = glm::normalize(mouvement);
         
-            // Mettre à jour la position du cube
-            cube->transform.position += mouvement * 10.0f * deltaTime;
+            // Mettre à jour la position du chat
+            chat->transform.position += mouvement * 10.0f * deltaTime;
         
             // Calculer l'angle de rotation autour de l'axe Y en fonction de la direction de mouvement
             float rotationY = atan2(mouvement.x, mouvement.z);
         
-            // Appliquer la rotation au cube
-            cube->transform.rotation.y = rotationY;
+            // Appliquer la rotation au chat
+            chat->transform.rotation.y = rotationY;
         }
 
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -1041,9 +1054,9 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> cube){
 
         
         if(glfwGetKey(window,GLFW_KEY_Q) == GLFW_PRESS)
-            cam_distance += 1. * deltaTime;
+            cam_distance += 3. * deltaTime;
         if(glfwGetKey(window,GLFW_KEY_E) == GLFW_PRESS)
-            cam_distance -= 1. * deltaTime;
+            cam_distance -= 3. * deltaTime;
 
 
         glm::vec3 offset;
@@ -1051,9 +1064,9 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> cube){
         offset.y = cam_distance * sin(glm::radians(pitch_));
         offset.z = cam_distance * cos(glm::radians(pitch_)) * sin(glm::radians(yaw_));
 
-        camera_position = cube->transform.position + offset;
+        camera_position = chat->transform.position + offset;
 
-        camera_target = glm::normalize(cube->transform.position - camera_position);
+        camera_target = glm::normalize(chat->transform.position - camera_position);
 
         glfwSetCursorPos(window, width / 2, height / 2);
     }
@@ -1067,21 +1080,21 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> cube){
     /****************************************/
 
     if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) 
-        cube->transform.position -= glm::vec3(0.0f, 0.0f, 0.1f);
+        chat->transform.position -= glm::vec3(0.0f, 0.0f, 0.1f);
     if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) 
-        cube->transform.position += glm::vec3(0.0f, 0.0f, 0.1f);
+        chat->transform.position += glm::vec3(0.0f, 0.0f, 0.1f);
     if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) 
-        cube->transform.position -= glm::vec3(0.1f, 0.0f, 0.0f);
+        chat->transform.position -= glm::vec3(0.1f, 0.0f, 0.0f);
     if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) 
-        cube->transform.position += glm::vec3(0.1f, 0.0f, 0.0f);
+        chat->transform.position += glm::vec3(0.1f, 0.0f, 0.0f);
     if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) 
-        cube->transform.position -= glm::vec3(0.0f, 0.1f, 0.0f);
+        chat->transform.position -= glm::vec3(0.0f, 0.1f, 0.0f);
     if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS) 
-        cube->transform.position += glm::vec3(0.0f, 0.1f, 0.0f);
+        chat->transform.position += glm::vec3(0.0f, 0.1f, 0.0f);
 
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !isJumping && !isFalling){
         isJumping = true;
-        cube->transform.position.y += deltaTime;
+        chat->transform.position.y += deltaTime;
     } 
 }
 
