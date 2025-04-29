@@ -833,7 +833,7 @@ int main( void ){
     // );
 
     std::shared_ptr<SNode> jump;
-    std::shared_ptr<SNode> plan = std::make_shared<SNode>(1,"textures/grass.png");
+    std::shared_ptr<SNode> plan = std::make_shared<SNode>(1,"textures/plancher.png");
     plan->transform.scale = glm::vec3(10.0f);
     std::shared_ptr<SNode> plan2 = std::make_shared<SNode>(3,"textures/grass.png");
     plan2->transform.scale = glm::vec3(2.0f);
