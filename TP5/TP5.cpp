@@ -823,6 +823,7 @@ int main( void ){
     std::shared_ptr<SNode> plan = std::make_shared<SNode>(1,"textures/grass.png");
     plan->transform.scale = glm::vec3(10.0f);
     std::shared_ptr<SNode> plan2 = std::make_shared<SNode>(3,"textures/grass.png");
+    plan2->transform.scale = glm::vec3(2.0f);
     std::shared_ptr<SNode> tronc = std::make_shared<SNode>(5,"textures/corde_texture.png");
     std::shared_ptr<SNode> mur = std::make_shared<SNode>(6,"textures/rock.png");
 
@@ -838,7 +839,7 @@ int main( void ){
     soleil->transform.position = glm::vec3(-1.0f,5.0f,1.0f);
     tronc->transform.position = glm::vec3(0.0f,0.0f, 0.0f);
     chat->transform.position = glm::vec3(-1.0f,2.0f,-1.0f);
-    plan2->transform.position = glm::vec3(0.0f,9.65f,-9.65f);
+    plan2->transform.position = glm::vec3(0.0f,4.65f,-9.65f);
     mur->transform.position = glm::vec3(0.0f,0.0f,-5.0f);
 
     float time = 0.0f;
