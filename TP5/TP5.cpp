@@ -873,11 +873,30 @@ int main( void ){
     // std::shared_ptr<SNode> cube = std::make_shared<SNode>(3,"textures/rock.png");
     std::shared_ptr<SNode> chat = std::make_shared<SNode>(4,vec3(1.0,0.1,0.2));
     // std::shared_ptr<SNode> cube = std::make_shared<SNode>(4,glm::vec3(1.0,0.0,0.0));
-    std::shared_ptr<SNode> soleil = std::make_shared<SNode>(0,"textures/rustediron2_basecolor.png",
-    "textures/rustediron2_normal.png", 
-    "textures/rustediron2_roughness.png", 
-    "textures/rustediron2_metallic.png",
-    "textures/test_sphere_ao.png"); // Sans LOD
+    std::shared_ptr<SNode> soleil = std::make_shared<SNode>(0,"pbr/rustediron2_basecolor.png",
+    "pbr/rustediron2_normal.png", 
+    "pbr/rustediron2_roughness.png", 
+    "pbr/rustediron2_metallic.png",
+    "pbr/test_sphere_ao.png"); 
+    std::shared_ptr<SNode> boule = std::make_shared<SNode>(
+        0,
+        "pbr/TCom_SolarCells_512_albedo.png",
+        "pbr/TCom_SolarCells_512_normal.png",
+        "pbr/TCom_SolarCells_512_roughness.png",
+        "pbr/TCom_SolarCells_512_metallic.png",
+        "pbr/TCom_SolarCells_512_ao.png"
+    );
+    std::shared_ptr<SNode> boule2 = std::make_shared<SNode>(
+        0,
+        "pbr/TCom_Scifi_Panel_512_albedo.png",
+        "pbr/TCom_Scifi_Panel_512_normal.png",
+        "pbr/TCom_Scifi_Panel_512_roughness.png",
+        "pbr/TCom_Scifi_Panel_512_metallic.png",
+        "pbr/TCom_Scifi_Panel_512_ao.png"
+    );
+    
+    
+    // Sans LOD
     // std::shared_ptr<SNode> soleil = std::make_shared<SNode>(
     //     2,
     //     "textures/s2.png",
@@ -894,6 +913,8 @@ int main( void ){
 
     scene->racine->addFeuille(chat);
     scene->racine->addFeuille(soleil);
+    scene->racine->addFeuille(boule);
+    scene->racine->addFeuille(boule2);
     scene->racine->addFeuille(tronc);
     scene->racine->addFeuille(mur);
     scene->racine->addFeuille(plan);
@@ -902,6 +923,8 @@ int main( void ){
     scene->add_light(glm::vec3(chat->transform.position));
 
     soleil->transform.position = glm::vec3(-1.0f,5.0f,1.0f);
+    boule->transform.position = glm::vec3(-3.0f,3.0f,3.0f);
+    boule2->transform.position = glm::vec3(-3.0f,6.0f,0.0f);
     tronc->transform.position = glm::vec3(0.0f,0.0f, 0.0f);
     chat->transform.position = glm::vec3(-1.0f,2.0f,-1.0f);
     plan2->transform.position = glm::vec3(0.0f,4.65f,-9.65f);
