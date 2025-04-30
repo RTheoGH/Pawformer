@@ -20,11 +20,9 @@ uniform vec3 lightsPos[10];
 const float PI = 3.14159265359;
 uniform int PBR_OnOff;
 
-vec3 normalTBN;
 
-vec3 getNormalFromMap() {
-    normalTBN = normal * 2.0 - 1.0; // convertir de [0,1] à [-1,1]
-    return normalize(TBN * normal); // transforme dans l’espace monde
+vec3 getNormalFromMap(vec3 N) {
+    return normalize(TBN * (N * 2.0 - 1.0));
 }
 
 vec3 fresnelSchlick(float cosTheta, vec3 F0)
@@ -91,7 +89,8 @@ void main(){
         }
 
         if(isPBR == 1 && PBR_OnOff == 1){
-                vec3 N = normalize(getNormalFromMap());
+                vec3 N = normalize(normal);
+                N = getNormalFromMap(N);
                 vec3 V = normalize(camPos - fragPos);
 
                 vec3 albedo     = texture(texture1, UV).rgb;
@@ -136,7 +135,7 @@ void main(){
                         
                 color_temp = color_temp / (color_temp + vec3(1.0));
                 color_temp = pow(color, vec3(1.0/2.2)); 
-                color_temp *= 2.0;
+                // color_temp *= 2.0;
                 
         }
 

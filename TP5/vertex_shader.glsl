@@ -17,10 +17,6 @@ uniform sampler2D heightmap;
 uniform sampler2D normalMap;
 uniform int isTerrain;
 
-vec3 T = normalize(mat3(model) * tangent);   // tangent du mesh
-vec3 N = normalize(mat3(model) * normal);    // normale du mesh
-vec3 B = normalize(cross(N, T));             // bitangent, recalculé si besoin
-
 void main(){
         normal = texture(normalMap,vertexUV).rgb;
         vec3 pos = vertices_position_modelspace;
@@ -29,6 +25,10 @@ void main(){
         //         float height = texture(heightmap,vertexUV).r;
         //         pos.y += height;
         // }
+
+        vec3 T = normalize(mat3(model) * tangent);   // tangent du mesh
+        vec3 N = normalize(mat3(model) * normal);    // normale du mesh
+        vec3 B = normalize(cross(N, T));             // bitangent, recalculé si besoin
 
         // gl_Position = MVP * vec4(relief,1);
         gl_Position = MVP * vec4(pos,1);

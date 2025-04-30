@@ -588,7 +588,7 @@ public:
         );
 
         MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
-        if(type_objet == 0) glUniformMatrix4fv(ModelID,1,GL_FALSE,&ModelMatrix[0][0]);
+        glUniformMatrix4fv(ModelID,1,GL_FALSE,&ModelMatrix[0][0]);
         glUniformMatrix4fv(MatrixID,1,GL_FALSE,&MVP[0][0]);
 
         GLuint isColorID = glGetUniformLocation(shaderProgram,"isColor");
