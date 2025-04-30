@@ -2,6 +2,7 @@
 
 in vec2 UV;
 in vec3 normal;
+// in vec3 localPos;
 in vec3 fragPos;
 in mat3 TBN;
 // Ouput data
@@ -19,6 +20,19 @@ uniform int nbLights;
 uniform vec3 lightsPos[10];
 const float PI = 3.14159265359;
 uniform int PBR_OnOff;
+
+// // uniform sampler2D equirectangularMap;
+
+// const vec2 invAtan = vec2(0.1591, 0.3183);
+// vec2 SampleSphericalMap(vec3 v)
+// {
+//     vec2 uv = vec2(atan(v.z, v.x), asin(v.y));
+//     uv *= invAtan;
+//     uv += 0.5;
+//     return uv;
+// }
+
+
 
 
 vec3 getNormalFromMap(vec3 N) {
@@ -131,10 +145,10 @@ void main(){
                 }   
                 
                 vec3 ambient = vec3(0.03) * albedo * ao;
-                vec3 color = ambient + Lo;
+                color_temp = ambient + Lo;
                         
                 color_temp = color_temp / (color_temp + vec3(1.0));
-                color_temp = pow(color, vec3(1.0/2.2)); 
+                color_temp = pow(color_temp, vec3(1.0/2.2)); 
                 // color_temp *= 2.0;
                 
         }
