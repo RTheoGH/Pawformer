@@ -777,12 +777,6 @@ int main( void ){
     // Cull triangles which normal is not towards the camera
     //glEnable(GL_CULL_FACE);
 
-    // alutInit(0, NULL);
-    // ALuint buffer = alutCreateBufferFromFile("assets/OIIAOIIA.wav");
-    // ALuint source;
-    // alGenSources(1, &source);
-    // alSourcei(source, AL_BUFFER, buffer);
-
     ma_engine engine;
     ma_engine_init(NULL, &engine);
 
@@ -948,10 +942,6 @@ int main( void ){
     glDeleteProgram(programID);
     glDeleteVertexArrays(1,&VertexArrayID);
 
-    // alDeleteSources(1, &source);
-    // alDeleteBuffers(1, &buffer);
-    // alutExit();
-
     // Close OpenGL window and terminate GLFW
     glfwTerminate();
     return 0;
@@ -1063,11 +1053,6 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> chat,ma_engine engi
                 ma_engine_play_sound(&engine,"assets/OIIAOIIA.wav",NULL);
             }
         };
-
-        // if(glfwGetKey(window,GLFW_KEY_O) == GLFW_PRESS){
-        //     oiia = !oiia;
-        //     std::cout << oiia << std::endl;
-        // }
 
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         int width, height;
