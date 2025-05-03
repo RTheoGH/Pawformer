@@ -23,9 +23,13 @@ GLFWwindow* window;
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 
-#include <AL/al.h>
-#include <AL/alc.h>
-#include <AL/alut.h>
+// #include <AL/al.h>
+// #include <AL/alc.h>
+// #include <AL/alut.h>
+
+#include "../external/AL/al.h"
+#include "../external/AL/alc.h"
+#include "../external/AL/alut.h"
 
 using namespace glm;
 
