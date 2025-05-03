@@ -1048,7 +1048,7 @@ int main( void ){
         processInput(window,chat,engine);
 
         if(oiia){
-            chat->transform.rotation += glm::vec3(0.0f,1.0f,0.0f) * (deltaTime*12);
+            chat->transform.rotation += glm::vec3(0.0f,1.0f,0.0f) * (deltaTime*18);
             chat->transform.position.y += deltaTime*10;
         }
 
@@ -1152,7 +1152,7 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> chat,ma_engine engi
     if(!cam_attache){
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         if(glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
-                camera_position += cameraSpeed * camera_target;
+            camera_position += cameraSpeed * camera_target;
         if(glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS)
             camera_position -= cameraSpeed * camera_target;
         if(glfwGetKey(window,GLFW_KEY_A) == GLFW_PRESS)
