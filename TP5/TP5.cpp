@@ -1215,11 +1215,18 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> chat,ma_engine engi
             chat->transform.rotation.y = rotationY;
         }
 
+        static float sonTimer = 0.0f;
         if(input_toggle(GLFW_KEY_O,o_p_s,oiia)){
-            if(oiia == true){
-                ma_engine_play_sound(&engine,"assets/OIIAOIIA.wav",NULL);
-            }
+            if(!oiia) sonTimer = 0.0f;
         };
+
+        if (oiia) {
+            sonTimer -= deltaTime;
+            if(sonTimer <= 0.0f){
+                ma_engine_play_sound(&engine,"assets/OIIAOIIA.wav",NULL);
+                sonTimer = 1.35f;
+            }
+        }
 
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         int width, height;
