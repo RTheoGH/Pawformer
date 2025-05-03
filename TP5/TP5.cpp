@@ -10,6 +10,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+#define MINIAUDIO_IMPLEMENTATION
+#include "../external/miniaudio/miniaudio.h"
+
 // Include GLEW
 #include <GL/glew.h>
 
@@ -84,6 +87,9 @@ double poids = masse_chat*gravite;
 
 bool PBR_OnOff = false;
 int p_preview_state = GLFW_RELEASE;
+
+bool oiia = false;
+int o_p_s = GLFW_RELEASE;
 
 /*******************************************************************************/
 
@@ -800,7 +806,7 @@ void processSphereCollision(glm::vec3 &pos_chat, std::shared_ptr<SNode> sphere, 
 
 /*******************************************************************************/
 
-void processInput(GLFWwindow *window,std::shared_ptr<SNode> soleil);
+void processInput(GLFWwindow *window,std::shared_ptr<SNode> soleil,ma_engine engine);
 bool input_toggle(int pressed_key, int &previous_state_key, bool &toggle_bool){
     bool is_toggled = glfwGetKey(window, pressed_key) == GLFW_PRESS && previous_state_key ==  GLFW_RELEASE;
     if(is_toggled){
@@ -870,6 +876,9 @@ int main( void ){
 
     // Cull triangles which normal is not towards the camera
     //glEnable(GL_CULL_FACE);
+
+    ma_engine engine;
+    ma_engine_init(NULL, &engine);
 
     GLuint VertexArrayID;
     glGenVertexArrays(1, &VertexArrayID);
@@ -960,13 +969,29 @@ int main( void ){
     //     std::vector<const char*>{"modeles/sphere2.off","modeles/sphere.off"}
     // );
 
+    std::shared_ptr<SNode> mur_p1 = std::make_shared<SNode>(6,"textures/rock.png");
+    std::shared_ptr<SNode> mur_p2 = std::make_shared<SNode>(6,"textures/rock.png");
+    std::shared_ptr<SNode> mur_p3 = std::make_shared<SNode>(6,"textures/rock.png");
+    std::shared_ptr<SNode> mur_p4 = std::make_shared<SNode>(6,"textures/rock.png");
+    std::shared_ptr<SNode> plafond = std::make_shared<SNode>(1,"textures/rock.png");
+
+    mur_p1->transform.position = glm::vec3(0.0,0.0,-5.0f);
+    mur_p2->transform.position = glm::vec3(4.685,0.0,-0.315f);
+    mur_p2->transform.rotation = glm::vec3(0.0,glm::radians(90.0f),0.0);
+    mur_p3->transform.position = glm::vec3(-5.0f,0.0,-0.315f);
+    mur_p3->transform.rotation = glm::vec3(0.0,glm::radians(90.0f),0.0);
+    mur_p4->transform.position = glm::vec3(0.0,0.0,4.685f);
+    plafond->transform.position = glm::vec3(0.0f,9.685f,0.0f);
+
+
     std::shared_ptr<SNode> jump;
-    std::shared_ptr<SNode> plan = std::make_shared<SNode>(1,"textures/grass.png");
+    std::shared_ptr<SNode> plan = std::make_shared<SNode>(1,"textures/plancher.png");
     plan->transform.scale = glm::vec3(10.0f);
     std::shared_ptr<SNode> plan2 = std::make_shared<SNode>(3,"textures/grass.png");
     plan2->transform.scale = glm::vec3(2.0f);
     std::shared_ptr<SNode> tronc = std::make_shared<SNode>(5,"textures/corde_texture.png");
     std::shared_ptr<SNode> mur = std::make_shared<SNode>(6,"textures/rock.png");
+
 
     scene->racine->addFeuille(chat);
     scene->racine->addFeuille(soleil);
@@ -976,6 +1001,13 @@ int main( void ){
     scene->racine->addFeuille(mur);
     scene->racine->addFeuille(plan);
     scene->racine->addFeuille(plan2);
+
+    plan->addFeuille(mur_p1);
+    plan->addFeuille(mur_p2);
+    plan->addFeuille(mur_p3);
+    plan->addFeuille(mur_p4);
+    plan->addFeuille(plafond);
+
     scene->add_light(glm::vec3(1., 1., 1.));
     scene->add_light(glm::vec3(chat->transform.position));
 
@@ -1013,7 +1045,12 @@ int main( void ){
 
         // input
         // -----
-        processInput(window,chat);
+        processInput(window,chat,engine);
+
+        if(oiia){
+            chat->transform.rotation += glm::vec3(0.0f,1.0f,0.0f) * (deltaTime*12);
+            chat->transform.position.y += deltaTime*10;
+        }
 
         GLuint PBRID = glGetUniformLocation(programID,"PBR_OnOff");
         glUniform1i(PBRID,(PBR_OnOff) ? 1 : 0);
@@ -1096,7 +1133,7 @@ float ClipAngle180(float _angle){
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window, std::shared_ptr<SNode> chat){
+void processInput(GLFWwindow *window, std::shared_ptr<SNode> chat,ma_engine engine){
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
@@ -1185,6 +1222,12 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> chat){
             // Appliquer la rotation au chat
             chat->transform.rotation.y = rotationY;
         }
+
+        if(input_toggle(GLFW_KEY_O,o_p_s,oiia)){
+            if(oiia == true){
+                ma_engine_play_sound(&engine,"assets/OIIAOIIA.wav",NULL);
+            }
+        };
 
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         int width, height;
