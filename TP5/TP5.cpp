@@ -10,6 +10,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+#define MINIAUDIO_IMPLEMENTATION
+#include "../external/miniaudio/miniaudio.h"
+
 // Include GLEW
 #include <GL/glew.h>
 
@@ -22,14 +25,6 @@ GLFWwindow* window;
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
-
-// #include <AL/al.h>
-// #include <AL/alc.h>
-// #include <AL/alut.h>
-
-#include "../external/AL/al.h"
-#include "../external/AL/alc.h"
-#include "../external/AL/alut.h"
 
 using namespace glm;
 
@@ -711,7 +706,7 @@ float gethauteur(std::shared_ptr<Scene> scene,std::shared_ptr<SNode> chat){
 
 /*******************************************************************************/
 
-void processInput(GLFWwindow *window,std::shared_ptr<SNode> soleil,ALuint source);
+void processInput(GLFWwindow *window,std::shared_ptr<SNode> soleil,ma_engine engine);
 bool input_toggle(int pressed_key, int &previous_state_key, bool &toggle_bool){
     bool is_toggled = glfwGetKey(window, pressed_key) == GLFW_PRESS && previous_state_key ==  GLFW_RELEASE;
     if(is_toggled){
@@ -782,11 +777,14 @@ int main( void ){
     // Cull triangles which normal is not towards the camera
     //glEnable(GL_CULL_FACE);
 
-    alutInit(0, NULL);
-    ALuint buffer = alutCreateBufferFromFile("assets/OIIAOIIA.wav");
-    ALuint source;
-    alGenSources(1, &source);
-    alSourcei(source, AL_BUFFER, buffer);
+    // alutInit(0, NULL);
+    // ALuint buffer = alutCreateBufferFromFile("assets/OIIAOIIA.wav");
+    // ALuint source;
+    // alGenSources(1, &source);
+    // alSourcei(source, AL_BUFFER, buffer);
+
+    ma_engine engine;
+    ma_engine_init(NULL, &engine);
 
     GLuint VertexArrayID;
     glGenVertexArrays(1, &VertexArrayID);
@@ -884,7 +882,7 @@ int main( void ){
 
         // input
         // -----
-        processInput(window,chat,source);
+        processInput(window,chat,engine);
 
         if(oiia){
             chat->transform.rotation += glm::vec3(0.0f,1.0f,0.0f) * (deltaTime*12);
@@ -950,9 +948,9 @@ int main( void ){
     glDeleteProgram(programID);
     glDeleteVertexArrays(1,&VertexArrayID);
 
-    alDeleteSources(1, &source);
-    alDeleteBuffers(1, &buffer);
-    alutExit();
+    // alDeleteSources(1, &source);
+    // alDeleteBuffers(1, &buffer);
+    // alutExit();
 
     // Close OpenGL window and terminate GLFW
     glfwTerminate();
@@ -970,7 +968,7 @@ float ClipAngle180(float _angle){
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window, std::shared_ptr<SNode> chat,ALuint source){
+void processInput(GLFWwindow *window, std::shared_ptr<SNode> chat,ma_engine engine){
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
@@ -1062,7 +1060,7 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> chat,ALuint source)
 
         if(input_toggle(GLFW_KEY_O,o_p_s,oiia)){
             if(oiia == true){
-                alSourcePlay(source);
+                ma_engine_play_sound(&engine,"assets/OIIAOIIA.wav",NULL);
             }
         };
 

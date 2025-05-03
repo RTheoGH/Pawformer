@@ -35,13 +35,9 @@ include_directories(
 	external/glfw-3.1.2/include/
 	external/glm-0.9.7.1/
 	external/glew-1.13.0/include/
-	external/AL
 	.
 )
 
-link_directories(${CMAKE_SOURCE_DIR}/external/lib)
-find_library(OPENAL_LIBRARY NAMES openal PATHS ${CMAKE_SOURCE_DIR}/external/lib)
-find_library(ALUT_LIBRARY NAMES alut PATHS ${CMAKE_SOURCE_DIR}/external/lib)
 
 set(ALL_LIBS
 	${OPENGL_LIBRARY}
@@ -76,8 +72,6 @@ add_executable(TP5
 )
 target_link_libraries(TP5
 	${ALL_LIBS}
-	${OPENAL_LIBRARY}
-	${ALUT_LIBRARY}
 )
 # Xcode and Visual working directories
 set_target_properties(TP5 PROPERTIES XCODE_ATTRIBUTE_CONFIGURATION_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/TP5/")
