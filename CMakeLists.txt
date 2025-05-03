@@ -3,12 +3,6 @@ cmake_minimum_required (VERSION 3.0)
 project (Tutorials)
 
 find_package(OpenGL REQUIRED)
-link_directories(${CMAKE_SOURCE_DIR}/external/lib)
-set(OPENAL_LIBRARY openal)
-set(ALUT_LIBRARY alut)
-
-include_directories(${CMAKE_SOURCE_DIR}/external/AL)
-
 
 if( CMAKE_BINARY_DIR STREQUAL CMAKE_SOURCE_DIR )
     message( FATAL_ERROR "Please select another Build Directory ! (and give it a clever name, like bin_Visual2012_64bits/)" )
@@ -44,6 +38,10 @@ include_directories(
 	external/AL
 	.
 )
+
+link_directories(${CMAKE_SOURCE_DIR}/external/lib)
+find_library(OPENAL_LIBRARY NAMES openal PATHS ${CMAKE_SOURCE_DIR}/external/lib)
+find_library(ALUT_LIBRARY NAMES alut PATHS ${CMAKE_SOURCE_DIR}/external/lib)
 
 set(ALL_LIBS
 	${OPENGL_LIBRARY}
