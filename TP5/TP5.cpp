@@ -729,6 +729,11 @@ public:
     }
 };
 
+bool checkCollisionSpheres(glm::vec3 pos1, float radius1, glm::vec3 pos2, float radius2){
+    float dist = glm::length(pos1-pos2);
+    return dist <= (radius1+radius2);
+}
+
 float gethauteur(std::shared_ptr<Scene> scene,std::shared_ptr<SNode> chat){
     float hauteurMax = -1.0f;
     std::shared_ptr<SNode> maxPlan;
@@ -759,8 +764,23 @@ float gethauteur(std::shared_ptr<Scene> scene,std::shared_ptr<SNode> chat){
                 }
             }
         }
+        // if(plan->type_objet == 0 || plan->type_objet == 2){
+        //     if(checkCollisionSpheres(position_chat, 1.0f, plan->transform.position, plan->transform.scale[0])){
+        //         float cosChat = glm::dot(glm::vec3(0., 1., 0.), (position_chat - plan->transform.position));
+
+        //     }
+        // }
     }
     return hauteurMax;
+}
+
+void processSphereCollision(glm::vec3 &pos_chat, std::shared_ptr<SNode> sphere){
+    if((sphere->type_objet == 2 || sphere->type_objet == 0)  && checkCollisionSpheres(pos_chat, 0.5f, sphere->transform.position, sphere->transform.scale[0])){
+        isJumping = false;
+        glm::vec3 offset = pos_chat-sphere->transform.position;
+        glm::normalize(offset);
+        pos_chat = sphere->transform.position + 1.5f*offset;
+    }
 }
 
 /*******************************************************************************/
@@ -987,6 +1007,10 @@ int main( void ){
         float hauteur_chat = chat->transform.scale.y;
         if(!isJumping) plan_hauteur = gethauteur(scene,chat);
 
+            
+        for(const std::shared_ptr<SNode>& object: scene->racine->feuilles){
+            processSphereCollision(chat->transform.position, object);
+        }
         // std::cout << "hauteur :" << plan_hauteur << std::endl;
 
         if(isJumping){
@@ -1005,6 +1029,16 @@ int main( void ){
         if (chat->transform.position.y > plan_hauteur + jump_height){
             isJumping = false;
             isFalling = true;
+        }
+
+        for(const std::shared_ptr<SNode>& plan: scene->racine->feuilles){
+            if((plan->type_objet == 2 || plan->type_objet == 0)  && checkCollisionSpheres(chat->transform.position, 0.5f, plan->transform.position, plan->transform.scale[0])){
+                isJumping = false;
+                std::cout<<"oui"<<std::endl;
+                glm::vec3 offset = chat->transform.position-plan->transform.position;
+                glm::normalize(offset);
+                chat->transform.position = plan->transform.position + 1.5f*offset;
+            }
         }
 
         if (debugFilaire) {
