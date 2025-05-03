@@ -3,10 +3,11 @@ cmake_minimum_required (VERSION 3.0)
 project (Tutorials)
 
 find_package(OpenGL REQUIRED)
-find_library(OPENAL_LIBRARY NAMES openal)
-find_library(ALUT_LIBRARY NAMES alut)
+link_directories(${CMAKE_SOURCE_DIR}/external/lib)
+set(OPENAL_LIBRARY openal)
+set(ALUT_LIBRARY alut)
 
-include_directories(/usr/include/AL)
+include_directories(${CMAKE_SOURCE_DIR}/external/AL)
 
 
 if( CMAKE_BINARY_DIR STREQUAL CMAKE_SOURCE_DIR )
@@ -40,6 +41,7 @@ include_directories(
 	external/glfw-3.1.2/include/
 	external/glm-0.9.7.1/
 	external/glew-1.13.0/include/
+	external/AL
 	.
 )
 
