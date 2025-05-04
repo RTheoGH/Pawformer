@@ -420,6 +420,8 @@ public:
     GLuint uvVBO = 0;
     size_t indexCPT = 0;
     glm::vec3 color;
+    float rayon = 0.0f;
+    float hauteur = 0.0f;
     int type_objet = 0;
     int isPBR = 0;
 
@@ -493,6 +495,8 @@ public:
                 break;
             case 5:
                 cylindre(vertices,uvs,indices);
+                hauteur = 30.0f;
+                rayon = 0.5f;
                 break;
             case 6:
                 mur(vertices,uvs,indices);
@@ -810,7 +814,22 @@ void processSphereCollision(glm::vec3 &pos_chat, std::shared_ptr<SNode> sphere, 
     }
 }
 
+bool checkCollisionCylindre(glm::vec3 &pos_chat, float rayon_chat, glm::vec3 pos_cylindre, float rayon_cylindre, float hauteur_cylindre){
+    if(pos_chat.y+rayon_chat < pos_cylindre.y || pos_chat.y-rayon_chat > pos_cylindre.y+hauteur_cylindre) return false;
+    if(glm::length(glm::vec3(pos_cylindre.x, pos_chat.y, pos_cylindre.z) - pos_chat) > rayon_chat+rayon_cylindre) return false;
+    return true;
+}
 
+void processCylindreCollision(glm::vec3 &pos_chat, std::shared_ptr<SNode> cylindre){
+    glm::vec3 pos_cylindre = cylindre->transform.position;
+    if(cylindre->type_objet == 5 && checkCollisionCylindre(pos_chat, 0.5f, pos_cylindre, cylindre->rayon, cylindre->hauteur*cylindre->transform.scale[1])){
+        float overlap = 0.5f + cylindre->rayon - glm::length(glm::vec3(pos_cylindre.x, pos_chat.y, pos_cylindre.z) - pos_chat);
+        if (overlap > 0.0f) {
+            glm::vec3 offset = glm::normalize(pos_chat - glm::vec3(pos_cylindre.x, pos_chat.y, pos_cylindre.z));
+            pos_chat += offset * overlap;
+        }
+    }
+}
 
 /*******************************************************************************/
 
@@ -1098,6 +1117,7 @@ int main( void ){
 
         for(const std::shared_ptr<SNode>& object: scene->racine->feuilles){
             processSphereCollision(chat->transform.position, object, plan_hauteur);
+            processCylindreCollision(chat->transform.position, object);
         }
 
         // Clear the screen
