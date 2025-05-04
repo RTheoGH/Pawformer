@@ -780,28 +780,36 @@ float gethauteur(std::shared_ptr<Scene> scene,std::shared_ptr<SNode> chat){
     return hauteurMax;
 }
 
-void processSphereCollision(glm::vec3 &pos_chat, std::shared_ptr<SNode> sphere, float &plan_hauteur){
+void processSphereCollision(glm::vec3 &pos_chat, std::shared_ptr<SNode> sphere, float &plan_hauteur) {
     if ((sphere->type_objet == 2 || sphere->type_objet == 0) &&
         checkCollisionSpheres(pos_chat, 0.5f, sphere->transform.position, sphere->transform.scale[0])) {
 
-        float cosCollision = glm::dot(glm::vec3(0., 1., 0.), (pos_chat - sphere->transform.position));
         float rayon_sphere = sphere->transform.scale[0];
         float rayon_chat = 0.5f;
         glm::vec3 offset = pos_chat - sphere->transform.position;
+
+        if (glm::length(offset) < 0.0001f)
+            return;
+
         offset = glm::normalize(offset);
-    
-        if(cosCollision > 0.5){
+        float cosCollision = glm::dot(glm::vec3(0., 1., 0.), offset);
+
+        if (cosCollision > 0.5f) {
             plan_hauteur = (sphere->transform.position + offset * rayon_sphere).y;
             isFalling = false;
             pos_chat.y = plan_hauteur + rayon_chat;
-            return;
-        }else if(cosCollision < 0){
+        }else if(cosCollision < 0.0f){
             isJumping = false;
+        } 
+        else {
+            glm::vec3 projectedOffset = glm::normalize(glm::vec3(offset.x, 0.0f, offset.z));
+            glm::vec3 horizontalPos = sphere->transform.position + projectedOffset * (rayon_sphere + rayon_chat);
+            pos_chat.x = horizontalPos.x;
+            pos_chat.z = horizontalPos.z;
         }
-
-        pos_chat = sphere->transform.position + offset * (rayon_sphere + rayon_chat);
     }
 }
+
 
 
 /*******************************************************************************/
