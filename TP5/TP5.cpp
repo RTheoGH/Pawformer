@@ -79,6 +79,7 @@ float cam_distance = 10.0f;
 float jump_height = 11.0f;
 bool isJumping = false;
 bool isFalling = false;
+bool isGrabbing = false;
 
 double gravite = 10.0f;
 double masse_chat = 2.0f;
@@ -173,8 +174,75 @@ void cylindre(std::vector<glm::vec3> &vertices, std::vector<glm::vec2> &uvs, std
     }
 }
 
+void plateforme(std::vector<glm::vec3> &vertices, std::vector<glm::vec2> &uvs, std::vector<unsigned short> &indices,
+                float hauteur = 0.5f, float rayon = 5.f, int tranches = 32, int segments = 1){
 
-void plan(std::vector<glm::vec3> &vertices,std::vector<glm::vec2> &uvs,std::vector<unsigned short> &indices){
+    int baseIndex = vertices.size();
+
+    // Génération du cylindre (latéral)
+    for(int i = 0; i <= segments; ++i){
+        float y = ((float)i / segments) * hauteur;
+
+        for(int j = 0; j <= tranches; ++j){
+            float theta = ((float)j / tranches) * 2.0f * glm::pi<float>();
+            float x = cos(theta) * rayon;
+            float z = sin(theta) * rayon;
+
+            vertices.emplace_back(glm::vec3(x, y, z));
+
+            float u = (float)j / (float)tranches;
+            float v = (float)i / (float)segments;
+            uvs.emplace_back(glm::vec2(u, v));
+        }
+    }
+
+    // Indices du cylindre latéral
+    for(int i = 0; i < segments; ++i){
+        for(int j = 0; j < tranches; ++j){
+            int current = baseIndex + i * (tranches + 1) + j;
+            int next = current + tranches + 1;
+
+            indices.push_back(current);
+            indices.push_back(next);
+            indices.push_back(current + 1);
+
+            indices.push_back(current + 1);
+            indices.push_back(next);
+            indices.push_back(next + 1);
+        }
+    }
+
+    // ===== Bouchon du bas =====
+    int centerBasIndex = vertices.size();
+    vertices.emplace_back(glm::vec3(0.0f, 0.0f, 0.0f));
+    uvs.emplace_back(glm::vec2(0.5f, 0.5f));
+
+    for(int j = 0; j < tranches; ++j){
+        int curr = baseIndex + j;
+        int next = baseIndex + (j + 1) % (tranches + 1);
+        indices.push_back(centerBasIndex);
+        indices.push_back(next);
+        indices.push_back(curr);
+    }
+
+    // ===== Bouchon du haut =====
+    int centerHautIndex = vertices.size();
+    vertices.emplace_back(glm::vec3(0.0f, hauteur, 0.0f));
+    uvs.emplace_back(glm::vec2(0.5f, 0.5f));
+
+    int ringStart = baseIndex + segments * (tranches + 1);
+    for(int j = 0; j < tranches; ++j){
+        int curr = ringStart + j;
+        int next = ringStart + (j + 1) % (tranches + 1);
+        indices.push_back(centerHautIndex);
+        indices.push_back(curr);
+        indices.push_back(next);
+    }
+}
+
+
+
+void plan(std::vector<glm::vec3> &vertices,std::vector<glm::vec2> &uvs,std::vector<unsigned short> &indices, std::vector<glm::vec3> &normals){
     float taille = 10.0f;
     float m = taille / 2.0f;
     float pas = taille / (float)sommets;
@@ -185,6 +253,7 @@ void plan(std::vector<glm::vec3> &vertices,std::vector<glm::vec2> &uvs,std::vect
             float z = -m + i * pas;
 
             vertices.emplace_back(glm::vec3(x,0.0f,z));
+            normals.emplace_back(glm::vec3(0.0f, 1.0f, 0.0f));
 
             float u = (float)j / (float)(sommets-1);
             float v = (float)i / (float)(sommets-1);
@@ -424,6 +493,7 @@ public:
     float hauteur = 0.0f;
     int type_objet = 0;
     int isPBR = 0;
+    bool grabable = false;
 
     const char* low;
     const char* high;
@@ -470,8 +540,9 @@ public:
         textureID = loadTexture(texturePath);
     }
 
-    SNode(int obj,glm::vec3 nodeColor): color(nodeColor){
+    SNode(int obj,glm::vec3 nodeColor){
         type_objet = obj;
+        color = nodeColor;
         buffers();
     }
 
@@ -480,7 +551,7 @@ public:
     void buffers(){
         switch(type_objet){
             case 1:
-                plan(vertices,uvs,indices); // Plan
+                plan(vertices,uvs,indices, normals); // Plan
                 break;
             case 2:
                 calculateUVSphere(vertices,uvs);
@@ -500,6 +571,11 @@ public:
                 break;
             case 6:
                 mur(vertices,uvs,indices);
+                break;
+            case 7:
+                plateforme(vertices, uvs, indices);
+                hauteur = 0.5f;
+                rayon = 5.0f;
                 break;
             default:
                 loadOFF("modeles/sphere2.off",vertices,indices,triangles);
@@ -820,13 +896,29 @@ bool checkCollisionCylindre(glm::vec3 &pos_chat, float rayon_chat, glm::vec3 pos
     return true;
 }
 
-void processCylindreCollision(glm::vec3 &pos_chat, std::shared_ptr<SNode> cylindre){
+void processCylindreCollision(glm::vec3 &pos_chat, std::shared_ptr<SNode> cylindre, float &plan_hauteur){
     glm::vec3 pos_cylindre = cylindre->transform.position;
     if(cylindre->type_objet == 5 && checkCollisionCylindre(pos_chat, 0.5f, pos_cylindre, cylindre->rayon, cylindre->hauteur*cylindre->transform.scale[1])){
         float overlap = 0.5f + cylindre->rayon - glm::length(glm::vec3(pos_cylindre.x, pos_chat.y, pos_cylindre.z) - pos_chat);
         if (overlap > 0.0f) {
             glm::vec3 offset = glm::normalize(pos_chat - glm::vec3(pos_cylindre.x, pos_chat.y, pos_cylindre.z));
             pos_chat += offset * overlap;
+        }
+        if(cylindre->grabable && glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS){
+            isGrabbing = true;
+        }
+    }
+    if(cylindre->type_objet == 7 && checkCollisionCylindre(pos_chat, 0.5f, pos_cylindre, cylindre->rayon, cylindre->hauteur*cylindre->transform.scale[1])){
+        if(glm::length(glm::vec3(pos_cylindre.x, pos_chat.y, pos_cylindre.z) - pos_chat) < 0.5+cylindre->rayon){
+            if(pos_chat.y > pos_cylindre.y+cylindre->hauteur){
+                plan_hauteur = cylindre->transform.position.y+cylindre->hauteur;
+                isFalling = false;
+                pos_chat.y = plan_hauteur + 0.5;
+            }
+            else if(pos_chat.y < pos_cylindre.y){
+                isJumping = false;
+                isFalling = true;
+            }
         }
     }
 }
@@ -1018,6 +1110,9 @@ int main( void ){
     plan2->transform.scale = glm::vec3(2.0f);
     std::shared_ptr<SNode> tronc = std::make_shared<SNode>(5,"textures/corde_texture.png");
     std::shared_ptr<SNode> mur = std::make_shared<SNode>(6,"textures/rock.png");
+    std::shared_ptr<SNode> plateforme = std::make_shared<SNode>(7, "textures/corde_texture.png");
+    std::shared_ptr<SNode> plateforme2 = std::make_shared<SNode>(7, "textures/corde_texture.png");
+    std::shared_ptr<SNode> plateforme3 = std::make_shared<SNode>(7, "textures/corde_texture.png");
 
 
     scene->racine->addFeuille(chat);
@@ -1028,6 +1123,9 @@ int main( void ){
     scene->racine->addFeuille(mur);
     scene->racine->addFeuille(plan);
     scene->racine->addFeuille(plan2);
+    scene->racine->addFeuille(plateforme);
+    scene->racine->addFeuille(plateforme2);
+    scene->racine->addFeuille(plateforme3);
 
     plan->addFeuille(mur_p1);
     plan->addFeuille(mur_p2);
@@ -1043,9 +1141,13 @@ int main( void ){
     boule2->transform.position = glm::vec3(-3.0f,0.5f,0.0f);
     boule2->transform.scale = glm::vec3(2.0f, 2.0f, 2.0f);
     tronc->transform.position = glm::vec3(0.0f,0.0f, 0.0f);
+    tronc->grabable = true;
     chat->transform.position = glm::vec3(-1.0f,2.0f,-1.0f);
     plan2->transform.position = glm::vec3(0.0f,4.65f,-9.65f);
     mur->transform.position = glm::vec3(0.0f,0.0f,-5.0f);
+    plateforme->transform.position = glm::vec3(3., 3., 3.);
+    plateforme2->transform.position = glm::vec3(6., 6., 6.);
+    plateforme3->transform.position = glm::vec3(9., 9., 9.);
 
     float time = 0.0f;
 
@@ -1096,7 +1198,7 @@ int main( void ){
             vitesse += acceleration * deltaTime;
         }else{
             isFalling = true;
-            chat->transform.position.y -= vitesse.length() * deltaTime * 11;
+            if(!isGrabbing) chat->transform.position.y -= vitesse.length() * deltaTime * 11;
 
             if (chat->transform.position.y < plan_hauteur + hauteur_chat) {
                 chat->transform.position.y = plan_hauteur + hauteur_chat;
@@ -1109,6 +1211,7 @@ int main( void ){
             isFalling = true;
         }
 
+        isGrabbing = false;
         if (debugFilaire) {
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);  // Vue filaire
         } else {
@@ -1117,7 +1220,7 @@ int main( void ){
 
         for(const std::shared_ptr<SNode>& object: scene->racine->feuilles){
             processSphereCollision(chat->transform.position, object, plan_hauteur);
-            processCylindreCollision(chat->transform.position, object);
+            processCylindreCollision(chat->transform.position, object, plan_hauteur);
         }
 
         // Clear the screen
