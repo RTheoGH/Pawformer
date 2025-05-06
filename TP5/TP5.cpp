@@ -860,6 +860,35 @@ float gethauteur(std::shared_ptr<Scene> scene,std::shared_ptr<SNode> chat){
     return hauteurMax;
 }
 
+void processGrabInput(glm::vec3 &pos_chat, std::shared_ptr<SNode> grabable_object){
+    if(grabable_object->type_objet == 5){
+        float rayon_obj = grabable_object->rayon;
+        glm::vec3 center = grabable_object->transform.position;
+        static float angle = 0.0f; // angle en radians
+
+        if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS){
+            // cube->transform.position -= forward * 10.0f * deltaTime;
+            pos_chat.y += 5 * deltaTime;
+        }
+        if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS){
+            // cube->transform.position += forward * 10.0f * deltaTime;
+            pos_chat.y -= 5 * deltaTime;
+            std::cout<<"allo"<<std::endl;
+        }
+        if(glfwGetKey(window,GLFW_KEY_A) == GLFW_PRESS){
+            // cube->transform.position -= right * 10.0f * deltaTime;
+            angle += 2.0f * deltaTime;
+        }
+        if(glfwGetKey(window,GLFW_KEY_D) == GLFW_PRESS){
+            // cube->transform.position += right * 10.0f * deltaTime;
+            angle -= 2.0f * deltaTime;
+        }
+        pos_chat.x = center.x + cos(angle) * rayon_obj;
+        pos_chat.z = center.z + sin(angle) * rayon_obj;
+    }
+}
+
+
 void processSphereCollision(glm::vec3 &pos_chat, std::shared_ptr<SNode> sphere, float &plan_hauteur) {
     if ((sphere->type_objet == 2 || sphere->type_objet == 0) &&
         checkCollisionSpheres(pos_chat, 0.5f, sphere->transform.position, sphere->transform.scale[0])) {
@@ -906,7 +935,12 @@ void processCylindreCollision(glm::vec3 &pos_chat, std::shared_ptr<SNode> cylind
         }
         if(cylindre->grabable && glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS){
             isGrabbing = true;
+            processGrabInput(pos_chat, cylindre);
+            if(pos_chat.y > pos_cylindre.y+cylindre->hauteur) pos_chat.y = pos_cylindre.y+cylindre->hauteur;
         }
+        // if(isGrabbing && glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_RELEASE)
+        // todo : faire un petit saut dans la direction opposée
+        
     }
     if(cylindre->type_objet == 7 && checkCollisionCylindre(pos_chat, 0.5f, pos_cylindre, cylindre->rayon, cylindre->hauteur*cylindre->transform.scale[1])){
         if(glm::length(glm::vec3(pos_cylindre.x, pos_chat.y, pos_cylindre.z) - pos_chat) < 0.5+cylindre->rayon){
@@ -1323,19 +1357,19 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> chat,ma_engine engi
 
         glm::vec3 mouvement = glm::vec3(0.0f);
 
-        if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS){
+        if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS && !isGrabbing){
             // cube->transform.position -= forward * 10.0f * deltaTime;
             mouvement -= forward;
         }
-        if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS){
+        if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS && !isGrabbing){
             // cube->transform.position += forward * 10.0f * deltaTime;
             mouvement += forward;
         }
-        if(glfwGetKey(window,GLFW_KEY_A) == GLFW_PRESS){
+        if(glfwGetKey(window,GLFW_KEY_A) == GLFW_PRESS && !isGrabbing){
             // cube->transform.position -= right * 10.0f * deltaTime;
             mouvement -= right;
         }
-        if(glfwGetKey(window,GLFW_KEY_D) == GLFW_PRESS){
+        if(glfwGetKey(window,GLFW_KEY_D) == GLFW_PRESS && !isGrabbing){
             // cube->transform.position += right * 10.0f * deltaTime;
             mouvement += right;
         }
