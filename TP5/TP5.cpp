@@ -860,31 +860,30 @@ float gethauteur(std::shared_ptr<Scene> scene,std::shared_ptr<SNode> chat){
     return hauteurMax;
 }
 
-void processGrabInput(glm::vec3 &pos_chat, std::shared_ptr<SNode> grabable_object){
+void processGrabInput(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> grabable_object){
     if(grabable_object->type_objet == 5){
         float rayon_obj = grabable_object->rayon;
+        glm::vec3 pos_chat = chat->transform.position;
         glm::vec3 center = grabable_object->transform.position;
-        static float angle = 0.0f; // angle en radians
+        static float angle = 0.0f;
 
         if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS){
-            // cube->transform.position -= forward * 10.0f * deltaTime;
-            pos_chat.y += 5 * deltaTime;
+            chat->transform.position.y += 5 * deltaTime;
         }
         if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS){
-            // cube->transform.position += forward * 10.0f * deltaTime;
-            pos_chat.y -= 5 * deltaTime;
-            std::cout<<"allo"<<std::endl;
+            chat->transform.position.y -= 5 * deltaTime;
         }
-        if(glfwGetKey(window,GLFW_KEY_A) == GLFW_PRESS){
-            // cube->transform.position -= right * 10.0f * deltaTime;
+        if(glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS){
             angle += 2.0f * deltaTime;
         }
-        if(glfwGetKey(window,GLFW_KEY_D) == GLFW_PRESS){
-            // cube->transform.position += right * 10.0f * deltaTime;
+        if(glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS){
             angle -= 2.0f * deltaTime;
         }
-        pos_chat.x = center.x + cos(angle) * rayon_obj;
-        pos_chat.z = center.z + sin(angle) * rayon_obj;
+        chat->transform.position.x = center.x + cos(angle) * rayon_obj;
+        chat->transform.position.z = center.z + sin(angle) * rayon_obj;
+        // glm::vec3 dir_chat = glm::vec3(center.x, chat->transform.position.y, center.z) - chat->transform.position;
+        // chat->transform.rotation.y = atan2(dir_chat.x, dir_chat.z);
+        chat->transform.rotation.x = 90.0f; // à régler jsp comment faire
     }
 }
 
@@ -925,31 +924,33 @@ bool checkCollisionCylindre(glm::vec3 &pos_chat, float rayon_chat, glm::vec3 pos
     return true;
 }
 
-void processCylindreCollision(glm::vec3 &pos_chat, std::shared_ptr<SNode> cylindre, float &plan_hauteur){
+void processCylindreCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> cylindre, float &plan_hauteur){
     glm::vec3 pos_cylindre = cylindre->transform.position;
-    if(cylindre->type_objet == 5 && checkCollisionCylindre(pos_chat, 0.5f, pos_cylindre, cylindre->rayon, cylindre->hauteur*cylindre->transform.scale[1])){
-        float overlap = 0.5f + cylindre->rayon - glm::length(glm::vec3(pos_cylindre.x, pos_chat.y, pos_cylindre.z) - pos_chat);
+    glm::vec3 pos_chat = chat->transform.position;
+    if(cylindre->type_objet == 5 && checkCollisionCylindre(chat->transform.position, 0.5f, pos_cylindre, cylindre->rayon, cylindre->hauteur*cylindre->transform.scale[1])){
+        float overlap = 0.5f + cylindre->rayon - glm::length(glm::vec3(pos_cylindre.x, chat->transform.position.y, pos_cylindre.z) - chat->transform.position);
         if (overlap > 0.0f) {
-            glm::vec3 offset = glm::normalize(pos_chat - glm::vec3(pos_cylindre.x, pos_chat.y, pos_cylindre.z));
-            pos_chat += offset * overlap;
+            glm::vec3 offset = glm::normalize(chat->transform.position - glm::vec3(pos_cylindre.x, chat->transform.position.y, pos_cylindre.z));
+            chat->transform.position += offset * overlap;
         }
         if(cylindre->grabable && glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS){
             isGrabbing = true;
-            processGrabInput(pos_chat, cylindre);
-            if(pos_chat.y > pos_cylindre.y+cylindre->hauteur) pos_chat.y = pos_cylindre.y+cylindre->hauteur;
+            processGrabInput(chat, cylindre);
+            if(chat->transform.position.y > pos_cylindre.y+cylindre->hauteur) chat->transform.position.y = pos_cylindre.y+cylindre->hauteur;
         }
+        else chat->transform.rotation.x = 0.0f;
         // if(isGrabbing && glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_RELEASE)
         // todo : faire un petit saut dans la direction opposée
         
     }
-    if(cylindre->type_objet == 7 && checkCollisionCylindre(pos_chat, 0.5f, pos_cylindre, cylindre->rayon, cylindre->hauteur*cylindre->transform.scale[1])){
-        if(glm::length(glm::vec3(pos_cylindre.x, pos_chat.y, pos_cylindre.z) - pos_chat) < 0.5+cylindre->rayon){
-            if(pos_chat.y > pos_cylindre.y+cylindre->hauteur){
+    if(cylindre->type_objet == 7 && checkCollisionCylindre(chat->transform.position, 0.5f, pos_cylindre, cylindre->rayon, cylindre->hauteur*cylindre->transform.scale[1])){
+        if(glm::length(glm::vec3(pos_cylindre.x, chat->transform.position.y, pos_cylindre.z) - chat->transform.position) < 0.5+cylindre->rayon){
+            if(chat->transform.position.y > pos_cylindre.y+cylindre->hauteur){
                 plan_hauteur = cylindre->transform.position.y+cylindre->hauteur;
                 isFalling = false;
-                pos_chat.y = plan_hauteur + 0.5;
+                chat->transform.position.y = plan_hauteur + 0.5;
             }
-            else if(pos_chat.y < pos_cylindre.y){
+            else if(chat->transform.position.y < pos_cylindre.y){
                 isJumping = false;
                 isFalling = true;
             }
@@ -1254,7 +1255,7 @@ int main( void ){
 
         for(const std::shared_ptr<SNode>& object: scene->racine->feuilles){
             processSphereCollision(chat->transform.position, object, plan_hauteur);
-            processCylindreCollision(chat->transform.position, object, plan_hauteur);
+            processCylindreCollision(chat, object, plan_hauteur);
         }
 
         // Clear the screen
