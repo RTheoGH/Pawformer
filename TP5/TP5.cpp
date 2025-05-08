@@ -1012,8 +1012,8 @@ void processMurCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> mu
     glm::vec4 localPos = invModel * glm::vec4(chat->transform.position, 1.0f);
 
     // Taille de la box en espace local (avant scale)
-    glm::vec3 minBox(-5.0f, 0.0f, -0.5f);
-    glm::vec3 maxBox( 5.0f, 10.0f,  0.5f);
+    glm::vec3 minBox(-5.0f, 0.0f, 0.0f);
+    glm::vec3 maxBox( 5.0f, 10.0f,  0.0f);
 
     // Rayon du chat exprimé en espace local du mur
     glm::vec3 scale = glm::vec3(
