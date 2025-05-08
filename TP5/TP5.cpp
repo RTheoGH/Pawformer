@@ -313,7 +313,7 @@ void cube(std::vector<glm::vec3> &vertices,std::vector<glm::vec2> &uvs, std::vec
     };
 }
 
-void mur(std::vector<glm::vec3> &vertices, std::vector<glm::vec2> &uvs, std::vector<unsigned short> &indices){
+void mur(std::vector<glm::vec3> &vertices, std::vector<glm::vec2> &uvs, std::vector<unsigned short> &indices, std::vector<glm::vec3> &normals){
     float taille = 10.0f;
     float m = taille / 2.0f;
     float pas = taille / (float)sommets;
@@ -481,10 +481,11 @@ void computeTangentsFromMesh(
 
 
 
-class SNode{
+class SNode : public std::enable_shared_from_this<SNode> {
 public:
     Transform transform;
     std::vector<std::shared_ptr<SNode>> feuilles;
+    std::shared_ptr<SNode> parent = nullptr;
     GLuint vao = 0, vbo = 0, ibo = 0, tangentVBO = 0, textureID = 0, normalsID = 0, roughnessID = 0, metalnessID = 0, aoID = 0;
     GLuint uvVBO = 0;
     size_t indexCPT = 0;
@@ -570,7 +571,7 @@ public:
                 rayon = 0.5f;
                 break;
             case 6:
-                mur(vertices,uvs,indices);
+                mur(vertices,uvs,indices, normals);
                 break;
             case 7:
                 plateforme(vertices, uvs, indices);
@@ -634,6 +635,20 @@ public:
 
     void addFeuille(std::shared_ptr<SNode> feuille){
         feuilles.push_back(feuille);
+        feuille->parent = shared_from_this();
+    }
+
+    std::vector<std::shared_ptr<SNode>> getFeuilles(){
+        std::vector<std::shared_ptr<SNode>> liste_feuilles;
+        for(const std::shared_ptr<SNode>& feuille: feuilles){
+            if(feuille->feuilles.empty()) liste_feuilles.push_back(feuille);
+            else{
+                for(const std::shared_ptr<SNode>& f: feuille->getFeuilles()){
+                    liste_feuilles.push_back(f);
+                }
+            }
+        }
+        return liste_feuilles;
     }
 
     virtual void update(float deltaTime){
@@ -762,6 +777,16 @@ public:
     bool hasTangeants() const {
         std::cout<<!tangents.empty()<<std::endl;
         return !tangents.empty();
+    }
+
+    glm::vec3 getScale(){
+        if(parent == nullptr) return transform.scale;
+        else return parent->getScale()*transform.scale;
+    }
+
+    glm::mat4 getModelMatrix(){
+        if(parent == nullptr) return transform.getMatrice();
+        else return parent->getModelMatrix()*transform.getMatrice();
     }
 }; 
 
@@ -957,6 +982,73 @@ void processCylindreCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNod
         }
     }
 }
+
+bool checkCollisionMur(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> mur) {
+    glm::mat4 model = mur->getModelMatrix();
+    glm::mat4 invModel = glm::inverse(model);
+    
+    // Position du chat dans l’espace local du mur
+    glm::vec4 localPos = invModel * glm::vec4(chat->transform.position, 1.0f);
+
+    glm::vec3 minBox(-5.0f, 0.0f, -0.5f);  // AABB locale du mur sans scale
+    glm::vec3 maxBox(5.0f, 10.0f, 0.5f);   // Hauteur et épaisseur
+
+    float rayon_chat = 0.5f;
+
+    // Test de collision avec marge
+    if (localPos.x > maxBox.x + rayon_chat || localPos.x < minBox.x - rayon_chat) return false;
+    if (localPos.y > maxBox.y + rayon_chat || localPos.y < minBox.y - rayon_chat) return false;
+    if (localPos.z > maxBox.z + rayon_chat || localPos.z < minBox.z - rayon_chat) return false;
+
+    return true;
+}
+
+void processMurCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> mur) {
+    if (mur->type_objet != 6) return;
+
+    glm::mat4 model = mur->getModelMatrix();
+    glm::mat4 invModel = glm::inverse(model);
+
+    glm::vec4 localPos = invModel * glm::vec4(chat->transform.position, 1.0f);
+
+    // Taille de la box en espace local (avant scale)
+    glm::vec3 minBox(-5.0f, 0.0f, -0.5f);
+    glm::vec3 maxBox( 5.0f, 10.0f,  0.5f);
+
+    // Rayon du chat exprimé en espace local du mur
+    glm::vec3 scale = glm::vec3(
+        glm::length(glm::vec3(model[0])),  // X axis
+        glm::length(glm::vec3(model[1])),  // Y axis
+        glm::length(glm::vec3(model[2]))   // Z axis
+    );
+
+    glm::vec3 rayon_local = glm::vec3(0.5f) / scale;
+
+    // Collision AABB avec marge de rayon
+    bool collision = (
+        localPos.x <= maxBox.x + rayon_local.x && localPos.x >= minBox.x - rayon_local.x &&
+        localPos.y <= maxBox.y + rayon_local.y && localPos.y >= minBox.y - rayon_local.y &&
+        localPos.z <= maxBox.z + rayon_local.z && localPos.z >= minBox.z - rayon_local.z
+    );
+
+    if (collision) {
+        // Repousse en Z local (normal du mur)
+        float distFront = maxBox.z + rayon_local.z - localPos.z;
+        float distBack  = localPos.z - (minBox.z - rayon_local.z);
+
+        glm::vec3 correctionLocal(0.0f);
+        if (distFront < distBack)
+            correctionLocal.z = -distFront;
+        else
+            correctionLocal.z = distBack;
+
+        glm::vec4 worldCorrection = model * glm::vec4(correctionLocal, 0.0f);
+        chat->transform.position -= glm::vec3(worldCorrection);
+    }
+}
+
+
+
 
 /*******************************************************************************/
 
@@ -1184,6 +1276,8 @@ int main( void ){
     plateforme2->transform.position = glm::vec3(6., 6., 6.);
     plateforme3->transform.position = glm::vec3(9., 9., 9.);
 
+    std::cout<<"nb feuilles :"<<scene->racine->getFeuilles().size()<<std::endl;
+
     float time = 0.0f;
 
     // For speed computation
@@ -1206,6 +1300,7 @@ int main( void ){
         deltaTime = currentFrame - lastFrame;
         // std::cout << "d : " << deltaTime << std::endl;
         lastFrame = currentFrame;
+        // std::cout<<"("<<chat->transform.position.x<<", "<<chat->transform.position.y<<", "<<chat->transform.position.z<<")"<<std::endl;
 
         // input
         // -----
@@ -1253,9 +1348,10 @@ int main( void ){
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);  // Vue normale
         }
 
-        for(const std::shared_ptr<SNode>& object: scene->racine->feuilles){
+        for(const std::shared_ptr<SNode>& object: scene->racine->getFeuilles()){
             processSphereCollision(chat->transform.position, object, plan_hauteur);
             processCylindreCollision(chat, object, plan_hauteur);
+            processMurCollision(chat, object);
         }
 
         // Clear the screen
