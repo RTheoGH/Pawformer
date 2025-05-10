@@ -1009,22 +1009,38 @@ void processCylindreCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNod
         // todo : faire un petit saut dans la direction opposée
         
     }
-    if(cylindre->type_objet == 7 && checkCollisionCylindre(localChatPos, 0.5f, glm::vec3(0.0f), rayon_cyl, hauteur_cyl)){
-        if(glm::length(glm::vec3(0.0f, localChatPos.y, 0.0f) - localChatPos) < 0.5+rayon_cyl){
-            if(localChatPos.y > hauteur_cyl - 0.5f){
-                // std::cout<<glm::vec3(model * glm::vec4(0.0f, hauteur_cyl, 0.0f, 1.0f)).y<<std::endl;
-                glm::vec3 projectedLocalTop = glm::vec3(localChatPos.x, hauteur_cyl, localChatPos.z);
-                glm::vec3 projectedWorldTop = glm::vec3(model * glm::vec4(projectedLocalTop, 1.0f));
-                plan_hauteur = projectedWorldTop.y;
-                chat->transform.position.y = projectedWorldTop.y + 0.5f;
+    if (cylindre->type_objet == 7 && checkCollisionCylindre(localChatPos, 0.5f, glm::vec3(0.0f), rayon_cyl, hauteur_cyl)) {
+        if (glm::length(glm::vec3(0.0f, localChatPos.y, 0.0f) - localChatPos) <= 0.5f + rayon_cyl) {
+
+            // Position dans le repère monde du sommet local touché
+            glm::vec3 topWorld = glm::vec3(model * glm::vec4(localChatPos.x, hauteur_cyl, localChatPos.z, 1.0f));
+            glm::vec3 bottomWorld = glm::vec3(model * glm::vec4(localChatPos.x, 0.0f, localChatPos.z, 1.0f));
+
+            // Normale monde locale Y du cylindre
+            glm::vec3 cylUp = glm::normalize(glm::vec3(model[1]));
+
+            if (localChatPos.y >= hauteur_cyl - 0.5f) {
+                
+                glm::vec3 contactPos = topWorld + cylUp * 0.5f;
+                plan_hauteur = contactPos.y -0.5;
+                chat->transform.position.y = contactPos.y;
                 isFalling = false;
             }
-            else if(localChatPos.y < -0.5f){
+
+            else if (localChatPos.y < 0.0f + 0.5f) {
+                // Collision par le dessous
+                chat->transform.position = bottomWorld - cylUp * 0.5f;
                 isJumping = false;
                 isFalling = true;
             }
+            else{
+                glm::vec3 offset = glm::normalize(localChatPos) * rayon_cyl;
+                chat->transform.position = glm::vec3(model * glm::vec4(offset, 1.0f));
+            }
         }
     }
+
+
 }
 
 void processMurCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> mur) {
@@ -1299,7 +1315,7 @@ int main( void ){
     plateforme->transform.position = glm::vec3(3., 3., 3.);
     plateforme2->transform.position = glm::vec3(6., 6., 6.);
     plateforme3->transform.position = glm::vec3(9., 9., 9.);
-    plateforme3->transform.rotation = glm::vec3(10.0f, 0.0f, 0.0f);
+    plateforme3->transform.rotation = glm::vec3(0.2f, 0.0f, 0.0f);
     tronc->transform.rotation = glm::vec3(0.0, 0.0, 5.0);
 
     std::cout<<"nb feuilles :"<<scene->racine->getFeuilles().size()<<std::endl;
