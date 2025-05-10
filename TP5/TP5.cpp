@@ -997,7 +997,7 @@ void processCylindreCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNod
                 chat->transform.position.y = projectedWorldTop.y + 0.5f;
                 isFalling = false;
             }
-            else if(localChatPos.y < 0.1f){
+            else if(localChatPos.y < -0.5f){
                 isJumping = false;
                 isFalling = true;
             }
