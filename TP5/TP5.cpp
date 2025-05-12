@@ -6,6 +6,9 @@
 #include <memory>
 #include <iostream>
 #include <numeric>
+#include <imgui/imgui.h>
+#include <imgui/imgui_impl_glfw.h>
+#include <imgui/imgui_impl_opengl3.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -94,6 +97,16 @@ bool oiia = false;
 int o_p_s = GLFW_RELEASE;
 
 /*******************************************************************************/
+
+void initImgui()
+{
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330");
+}
 
 // Chargeur de texture
 GLuint loadTexture(const char* filename) {
@@ -1251,6 +1264,9 @@ int main( void ){
         return -1;
     }
 
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     glfwWindowHint(GLFW_SAMPLES, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -1456,9 +1472,7 @@ int main( void ){
     mesh_chat_test->transform.scale = glm::vec3(10.0f);
     mesh_chat_test->transform.position = glm::vec3(20., 0., 20.);
 
-    for(int i = 0; i<mesh_chat_test->normals.size(); i++){
-        std::cout<<mesh_chat_test->normals[i][0]<<", "<<mesh_chat_test->normals[i][1]<<", "<<mesh_chat_test->normals[i][2]<<std::endl;
-    }
+    initImgui();
 
     std::cout<<"nb feuilles :"<<scene->racine->getFeuilles().size()<<std::endl;
 
@@ -1541,6 +1555,10 @@ int main( void ){
 
         // Clear the screen
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        int display_w, display_h;
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+        glViewport(0, 0, display_w, display_h);
+
 
         // Use our shader
         glUseProgram(programID);
@@ -1557,12 +1575,27 @@ int main( void ){
         
         time += deltaTime;
 
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        ImGui::Begin("Debug Info");
+        ImGui::Text("Hauteur : %.2f m", chat->transform.position.y);
+        ImGui::End();
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
     } // Check if the ESC key was pressed or the window was closed
     while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
            glfwWindowShouldClose(window) == 0 );
 
     glDeleteProgram(programID);
     glDeleteVertexArrays(1,&VertexArrayID);
+
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
     // Close OpenGL window and terminate GLFW
     glfwTerminate();

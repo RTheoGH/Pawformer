@@ -54,6 +54,8 @@ add_definitions(
 )
 
 # TP5
+file( GLOB IMGUIC imgui/*.cpp) 
+file( GLOB IMGUIH imgui/*.h) 
 add_executable(TP5
         TP5/TP5.cpp
 	common/shader.cpp
@@ -66,9 +68,13 @@ add_executable(TP5
 	common/objloader.hpp
 	common/vboindexer.cpp
 	common/vboindexer.hpp
+
 	
         TP5/vertex_shader.glsl
         TP5/fragment_shader.glsl
+
+		${IMGUIH}
+		${IMGUIC}
 )
 target_link_libraries(TP5
 	${ALL_LIBS}
