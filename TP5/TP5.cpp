@@ -83,6 +83,7 @@ bool isGrabbing = false;
 
 double gravite = 10.0f;
 double masse_chat = 2.0f;
+float rayon_chat = 0.5f;
 
 double poids = masse_chat*gravite;
 
@@ -578,6 +579,9 @@ public:
                 hauteur = 0.5f;
                 rayon = 5.0f;
                 break;
+            case 8:
+                loadOBJ("modeles/chat.obj",vertices,uvs,normals);
+                break;
             default:
                 loadOFF("modeles/sphere2.off",vertices,indices,triangles);
                 calculateUVSphere(vertices,uvs);
@@ -613,6 +617,19 @@ public:
                 indices.resize(vertices.size());
                 std::iota(indices.begin(), indices.end(), 0); // [0, 1, 2, ...]
             }
+
+            //Si l'OBJ n'a pas de triangles
+            if (triangles.empty()) {
+            triangles.clear();
+            for (size_t i = 0; i + 2 < indices.size(); i += 3) {
+                triangles.push_back({
+                    static_cast<unsigned short>(indices[i]),
+                    static_cast<unsigned short>(indices[i + 1]),
+                    static_cast<unsigned short>(indices[i + 2])
+                });
+            }
+}
+
         }
     
         if (hasIndices()) {
@@ -871,7 +888,7 @@ float gethauteur(std::shared_ptr<Scene> scene,std::shared_ptr<SNode> chat){
 
                 if(plan->transform.position.y > hauteurMax && position_chat.y > plan->transform.position.y){
                     if(plan->type_objet == 1) hauteurMax = plan->transform.position.y - 0.15f;
-                    if(plan->type_objet == 3) hauteurMax = plan->transform.position.y + plan->transform.scale.y*0.5-0.15f;
+                    if(plan->type_objet == 3) hauteurMax = plan->transform.position.y + plan->transform.scale.y*rayon_chat-0.15f;
                 }
             }
         }
@@ -937,10 +954,9 @@ void processGrabInput(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> graba
 
 void processSphereCollision(glm::vec3 &pos_chat, std::shared_ptr<SNode> sphere, float &plan_hauteur) {
     if ((sphere->type_objet == 2 || sphere->type_objet == 0) &&
-        checkCollisionSpheres(pos_chat, 0.5f, sphere->transform.position, sphere->transform.scale[0])) {
+        checkCollisionSpheres(pos_chat, rayon_chat, sphere->transform.position, sphere->transform.scale[0])) {
 
         float rayon_sphere = sphere->transform.scale[0];
-        float rayon_chat = 0.5f;
         glm::vec3 offset = pos_chat - sphere->transform.position;
 
         if (glm::length(offset) < 0.0001f)
@@ -989,12 +1005,12 @@ void processCylindreCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNod
 
     // Appliquer le scale à hauteur/rayon
     float hauteur_cyl = cylindre->hauteur * cylScale.y;
-    float rayon_cyl = cylindre->rayon * ((cylScale.x + cylScale.z) * 0.5f);  // moyenne XZ
+    float rayon_cyl = cylindre->rayon * ((cylScale.x + cylScale.z) * rayon_chat);  // moyenne XZ
 
-    float rayon_total = 0.5f + rayon_cyl;
+    float rayon_total = rayon_chat + rayon_cyl;
 
-    if(cylindre->type_objet == 5 && checkCollisionCylindre(localChatPos, 0.5f, glm::vec3(0.0f), rayon_cyl, hauteur_cyl)){
-        float overlap = 0.5 + rayon_cyl - glm::length(glm::vec3(0.0f, localChatPos.y, 0.0f) - localChatPos);
+    if(cylindre->type_objet == 5 && checkCollisionCylindre(localChatPos, rayon_chat, glm::vec3(0.0f), rayon_cyl, hauteur_cyl)){
+        float overlap = rayon_chat + rayon_cyl - glm::length(glm::vec3(0.0f, localChatPos.y, 0.0f) - localChatPos);
         if (overlap > 0.0f) {
             glm::vec3 offset = glm::normalize(localChatPos - glm::vec3(0.0f, localChatPos.y, 0.0f));
             chat->transform.position += glm::vec3(model * glm::vec4(offset * overlap, 1.0));
@@ -1009,8 +1025,8 @@ void processCylindreCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNod
         // todo : faire un petit saut dans la direction opposée
         
     }
-    if (cylindre->type_objet == 7 && checkCollisionCylindre(localChatPos, 0.5f, glm::vec3(0.0f), rayon_cyl, hauteur_cyl)) {
-        if (glm::length(glm::vec3(0.0f, localChatPos.y, 0.0f) - localChatPos) <= 0.5f + rayon_cyl) {
+    if (cylindre->type_objet == 7 && checkCollisionCylindre(localChatPos, rayon_chat, glm::vec3(0.0f), rayon_cyl, hauteur_cyl)) {
+        if (glm::length(glm::vec3(0.0f, localChatPos.y, 0.0f) - localChatPos) <= rayon_chat + rayon_cyl) {
 
             // Position dans le repère monde du sommet local touché
             glm::vec3 topWorld = glm::vec3(model * glm::vec4(localChatPos.x, hauteur_cyl, localChatPos.z, 1.0f));
@@ -1019,17 +1035,17 @@ void processCylindreCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNod
             // Normale monde locale Y du cylindre
             glm::vec3 cylUp = glm::normalize(glm::vec3(model[1]));
 
-            if (localChatPos.y >= hauteur_cyl - 0.5f) {
+            if (localChatPos.y >= hauteur_cyl - rayon_chat) {
                 
-                glm::vec3 contactPos = topWorld + cylUp * 0.5f;
-                plan_hauteur = contactPos.y -0.5;
+                glm::vec3 contactPos = topWorld + cylUp * rayon_chat;
+                plan_hauteur = contactPos.y - rayon_chat;
                 chat->transform.position.y = contactPos.y;
                 isFalling = false;
             }
 
-            else if (localChatPos.y < 0.0f + 0.5f) {
+            else if (localChatPos.y < 0.0f + rayon_chat) {
                 // Collision par le dessous
-                chat->transform.position = bottomWorld - cylUp * 0.5f;
+                chat->transform.position = bottomWorld - cylUp * rayon_chat;
                 isJumping = false;
                 isFalling = true;
             }
@@ -1062,7 +1078,7 @@ void processMurCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> mu
         glm::length(glm::vec3(model[2]))   // Z axis
     );
 
-    glm::vec3 rayon_local = glm::vec3(0.5f) / scale;
+    glm::vec3 rayon_local = glm::vec3(rayon_chat) / scale;
 
     // Collision AABB avec marge de rayon
     bool collision = (
@@ -1087,8 +1103,126 @@ void processMurCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> mu
     }
 }
 
+glm::vec3 ClosestPointOnTriangle(glm::vec3 p, glm::vec3 a, glm::vec3 b, glm::vec3 c) {
+    // Edges
+    glm::vec3 ab = b - a;
+    glm::vec3 ac = c - a;
+    glm::vec3 ap = p - a;
+
+    float d1 = glm::dot(ab, ap);
+    float d2 = glm::dot(ac, ap);
+    if (d1 <= 0.0f && d2 <= 0.0f) return a; // Barycentric coords (1,0,0)
+
+    glm::vec3 bp = p - b;
+    float d3 = glm::dot(ab, bp);
+    float d4 = glm::dot(ac, bp);
+    if (d3 >= 0.0f && d4 <= d3) return b; // (0,1,0)
+
+    glm::vec3 cp = p - c;
+    float d5 = glm::dot(ab, cp);
+    float d6 = glm::dot(ac, cp);
+    if (d6 >= 0.0f && d5 <= d6) return c; // (0,0,1)
+
+    float vc = d1 * d4 - d3 * d2;
+    if (vc <= 0.0f && d1 >= 0.0f && d3 <= 0.0f) {
+        float v = d1 / (d1 - d3);
+        return a + v * ab;
+    }
+
+    float vb = d5 * d2 - d1 * d6;
+    if (vb <= 0.0f && d2 >= 0.0f && d6 <= 0.0f) {
+        float v = d2 / (d2 - d6);
+        return a + v * ac;
+    }
+
+    float va = d3 * d6 - d5 * d4;
+    if (va <= 0.0f && (d4 - d3) >= 0.0f && (d5 - d6) >= 0.0f) {
+        float v = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+        return b + v * (c - b);
+    }
+
+    // Inside face region
+    float denom = 1.0f / (va + vb + vc);
+    float v = vb * denom;
+    float w = vc * denom;
+    return a + ab * v + ac * w;
+}
+
+float SphereTriangleCollision(glm::vec3 sphereCenter, float sphereRadius, glm::vec3 a, glm::vec3 b, glm::vec3 c) {
+    glm::vec3 closest = ClosestPointOnTriangle(sphereCenter, a, b, c);
+    float distSq = glm::length(closest - sphereCenter);
+    return distSq;
+}
+
+void processMeshCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> mesh, float &plan_hauteur){
+    if(mesh->type_objet != 8) return;
+
+    float min_dist = 100000.;
+    int min_index = -1;
+
+    glm::mat4 model = mesh->getModelMatrix();
+    glm::mat4 invModel = glm::inverse(model);
+
+    glm::vec3 worldChatPos = chat->transform.position;
+    glm::vec3 localChatPos = glm::vec3(invModel * glm::vec4(worldChatPos, 1.0f));
+
+    // Approximation : on suppose un scale uniforme ou on prend la moyenne
+    glm::vec3 scale = glm::vec3(
+        glm::length(glm::vec3(model[0])),
+        glm::length(glm::vec3(model[1])),
+        glm::length(glm::vec3(model[2]))
+    );
+    float averageScale = (scale.x + scale.y + scale.z) / 3.0f;
+    float rayon_chat_local = rayon_chat / averageScale;
 
 
+    for(int i = 0; i<mesh->triangles.size(); i++){
+        glm::vec3 a = mesh->vertices[mesh->triangles[i][0]];
+        glm::vec3 b = mesh->vertices[mesh->triangles[i][1]];
+        glm::vec3 c = mesh->vertices[mesh->triangles[i][2]];
+        float distTriangle = SphereTriangleCollision(localChatPos, rayon_chat, a, b, c);
+        if(min_dist > distTriangle){
+            min_dist = distTriangle;
+            min_index = i;
+        }
+    }
+
+    if(min_dist <= rayon_chat_local){
+        glm::vec3 a = mesh->vertices[mesh->triangles[min_index][0]];
+        glm::vec3 b = mesh->vertices[mesh->triangles[min_index][1]];
+        glm::vec3 c = mesh->vertices[mesh->triangles[min_index][2]];
+
+        glm::vec3 n1 = mesh->normals[mesh->triangles[min_index][0]];
+        glm::vec3 n2 = mesh->normals[mesh->triangles[min_index][1]];
+        glm::vec3 n3 = mesh->normals[mesh->triangles[min_index][2]];
+        glm::vec3 triangleNormal = glm::normalize((n1 + n2 + n3) / 3.0f);
+
+        glm::vec3 closestPoint = ClosestPointOnTriangle(localChatPos, a, b, c);
+        glm::vec3 correctionDir = glm::normalize(localChatPos - closestPoint);
+        if (glm::dot(correctionDir, triangleNormal) < 0.0f) {
+            triangleNormal = -triangleNormal;
+        }
+        float dist = rayon_chat_local - min_dist;
+        glm::vec3 localCorrection = localChatPos + triangleNormal * dist;
+
+        float cosCollision = glm::dot(glm::vec3(0., 1., 0.), triangleNormal);
+        if(cosCollision >= 0.5f){
+            plan_hauteur = glm::vec3(model * glm::vec4(localCorrection, 1.0f)).y;
+            chat->transform.position.y = plan_hauteur;
+            isFalling = false;
+        }
+        else if(cosCollision < 0.0f){
+            chat->transform.position = glm::vec3(model * glm::vec4(localCorrection, 1.0f));
+            isJumping = false;
+            isFalling = true;
+        }
+        else{
+            chat->transform.position = glm::vec3(model * glm::vec4(localCorrection, 1.0f));
+        }
+        
+
+    }
+}
 
 /*******************************************************************************/
 
@@ -1280,6 +1414,7 @@ int main( void ){
     std::shared_ptr<SNode> plateforme = std::make_shared<SNode>(7, "textures/corde_texture.png");
     std::shared_ptr<SNode> plateforme2 = std::make_shared<SNode>(7, "textures/corde_texture.png");
     std::shared_ptr<SNode> plateforme3 = std::make_shared<SNode>(7, "textures/corde_texture.png");
+    std::shared_ptr<SNode> mesh_chat_test = std::make_shared<SNode>(8, glm::vec3(0.0f, 0.0f, 0.0f));
 
 
     scene->racine->addFeuille(chat);
@@ -1293,6 +1428,7 @@ int main( void ){
     scene->racine->addFeuille(plateforme);
     scene->racine->addFeuille(plateforme2);
     scene->racine->addFeuille(plateforme3);
+    scene->racine->addFeuille(mesh_chat_test);
 
     plan->addFeuille(mur_p1);
     plan->addFeuille(mur_p2);
@@ -1317,6 +1453,12 @@ int main( void ){
     plateforme3->transform.position = glm::vec3(9., 9., 9.);
     plateforme3->transform.rotation = glm::vec3(0.2f, 0.0f, 0.0f);
     tronc->transform.rotation = glm::vec3(0.0, 0.0, 5.0);
+    mesh_chat_test->transform.scale = glm::vec3(10.0f);
+    mesh_chat_test->transform.position = glm::vec3(20., 0., 20.);
+
+    for(int i = 0; i<mesh_chat_test->normals.size(); i++){
+        std::cout<<mesh_chat_test->normals[i][0]<<", "<<mesh_chat_test->normals[i][1]<<", "<<mesh_chat_test->normals[i][2]<<std::endl;
+    }
 
     std::cout<<"nb feuilles :"<<scene->racine->getFeuilles().size()<<std::endl;
 
@@ -1394,6 +1536,7 @@ int main( void ){
             processSphereCollision(chat->transform.position, object, plan_hauteur);
             processCylindreCollision(chat, object, plan_hauteur);
             processMurCollision(chat, object);
+            processMeshCollision(chat, object, plan_hauteur);
         }
 
         // Clear the screen
