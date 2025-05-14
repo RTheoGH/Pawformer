@@ -1043,6 +1043,7 @@ void processCylindreCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNod
         }
         if(cylindre->grabable && glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS){
             isGrabbing = true;
+            chat->transform.rotation = glm::vec3(glm::radians(90.0f),0.0f,0.0f);
             processGrabInput(chat, cylindre);
             
         }
@@ -1446,11 +1447,11 @@ int main( void ){
     std::shared_ptr<SNode> jump;
     std::shared_ptr<SNode> plan = std::make_shared<SNode>(1,"textures/plancher.png");
     plan->transform.scale = glm::vec3(10.0f);
-    std::shared_ptr<SNode> plan2 = std::make_shared<SNode>(3,"textures/grass.png");
-    plan2->transform.scale = glm::vec3(2.0f);
+    // std::shared_ptr<SNode> plan2 = std::make_shared<SNode>(3,"textures/grass.png");
+    // plan2->transform.scale = glm::vec3(2.0f);
     
-    std::shared_ptr<SNode> mur = std::make_shared<SNode>(6,"textures/rock.png");
-    std::shared_ptr<SNode> mesh_chat_test = std::make_shared<SNode>(8, glm::vec3(0.0f, 0.0f, 0.0f));
+    // std::shared_ptr<SNode> mur = std::make_shared<SNode>(6,"textures/rock.png");
+    // std::shared_ptr<SNode> mesh_chat_test = std::make_shared<SNode>(8, glm::vec3(0.0f, 0.0f, 0.0f));
 
     scene->racine->addFeuille(chat);
 
@@ -1464,29 +1465,49 @@ int main( void ){
     // ---------------------------------------------- ARBRE ----------------------------------------------
 
     std::shared_ptr<SNode> tronc = std::make_shared<SNode>(5,"textures/corde_texture.png");
+    tronc->transform.scale = glm::vec3(2.0f);
     tronc->transform.position = glm::vec3(0.0f,0.0f, 0.0f);
     tronc->grabable = true;
+
     scene->racine->addFeuille(tronc);
 
     std::shared_ptr<SNode> socle = std::make_shared<SNode>(3,"textures/rock.png");
-    socle->transform.scale = glm::vec3(2.0f, 2.0f, 1.0f);
+    socle->transform.scale = glm::vec3(2.0f, 1.0f, 2.0f);
+
     tronc->addFeuille(socle);
 
     std::shared_ptr<SNode> plateforme = std::make_shared<SNode>(7, "textures/corde_texture.png");
     std::shared_ptr<SNode> plateforme2 = std::make_shared<SNode>(7, "textures/corde_texture.png");
     std::shared_ptr<SNode> plateforme3 = std::make_shared<SNode>(7, "textures/corde_texture.png");
-    plateforme->transform.position = glm::vec3(3., 3., 3.);
-    plateforme->transform.scale = glm::vec3(0.5f,1.0f,0.5f);
-    plateforme2->transform.position = glm::vec3(-6., 6., 6.);
-    plateforme2->transform.scale = glm::vec3(0.5f,1.0f,0.5f);
-    plateforme3->transform.position = glm::vec3(9., 9., 9.);
+    plateforme->transform.position = glm::vec3(1.5, 2., 0.);
+    plateforme->transform.scale = glm::vec3(0.5f);
+    plateforme2->transform.position = glm::vec3(-1.5, 5., -1.5);
+    plateforme2->transform.scale = glm::vec3(0.5f);
+    plateforme3->transform.position = glm::vec3(-1.5, 8., 1.5);
     plateforme3->transform.rotation = glm::vec3(0.2f, 0.0f, 0.0f);
-    plateforme3->transform.scale = glm::vec3(0.5f,1.0f,0.5f);
+    plateforme3->transform.scale = glm::vec3(0.5f);
+
     tronc->addFeuille(plateforme);
     tronc->addFeuille(plateforme2);
     tronc->addFeuille(plateforme3);
+
+    std::shared_ptr<SNode> cube = std::make_shared<SNode>(3,"textures/rock.png");
+    cube->transform.position = glm::vec3(0.0f,1.5f,0.0f);
+    cube->transform.scale = glm::vec3(2.0f);
+    plateforme->addFeuille(cube);
+
+    std::shared_ptr<SNode> chat_noir = std::make_shared<SNode>(8, glm::vec3(0.0f, 0.0f, 0.0f));
+    chat_noir->transform.position = glm::vec3(1.5f,1.75f,-1.5f);
+    chat_noir->transform.scale = glm::vec3(1.5f);
+    plateforme2->addFeuille(chat_noir);
     
     //tronc->transform.rotation = glm::vec3(0.0, 0.0, 5.0);
+    
+    soleil->transform.position = glm::vec3(-1.0f,15.0f,1.0f);
+    boule->transform.position = glm::vec3(-4.0f,1.f,2.0f);
+    boule->transform.scale = glm::vec3(2.0f);
+    boule2->transform.position = glm::vec3(-4.0f,18.5f,-10.0f);
+    boule2->transform.scale = glm::vec3(3.0f);
 
     scene->racine->addFeuille(soleil);
     scene->racine->addFeuille(boule);
@@ -1504,12 +1525,8 @@ int main( void ){
     scene->add_light(glm::vec3(1., 1., 1.));
     scene->add_light(glm::vec3(chat->transform.position));
 
-    soleil->transform.position = glm::vec3(-1.0f,15.0f,1.0f);
-    boule->transform.position = glm::vec3(-4.0f,5.5f,2.0f);
-    boule2->transform.position = glm::vec3(-4.0f,20.5f,-10.0f);
-    boule2->transform.scale = glm::vec3(2.0f, 2.0f, 2.0f);
     
-    chat->transform.position = glm::vec3(-1.0f,2.0f,-1.0f);
+    chat->transform.position = glm::vec3(-2.0f,2.0f,-2.0f);
     // plan2->transform.position = glm::vec3(0.0f,4.65f,-9.65f);
     // mur->transform.position = glm::vec3(0.0f,0.0f,-5.0f);
     // mesh_chat_test->transform.scale = glm::vec3(10.0f);
@@ -1552,7 +1569,7 @@ int main( void ){
             chat->transform.position.y += deltaTime*10;
         }
 
-        mesh_chat_test->transform.rotation += glm::vec3(0.0f, 0.01f, 0.0f);
+        chat_noir->transform.rotation += glm::vec3(0.0f, 0.01f, 0.0f);
 
         GLuint PBRID = glGetUniformLocation(programID,"PBR_OnOff");
         glUniform1i(PBRID,(PBR_OnOff) ? 1 : 0);
