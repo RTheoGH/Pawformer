@@ -633,15 +633,15 @@ public:
 
             //Si l'OBJ n'a pas de triangles
             if (triangles.empty()) {
-            triangles.clear();
-            for (size_t i = 0; i + 2 < indices.size(); i += 3) {
-                triangles.push_back({
-                    static_cast<unsigned short>(indices[i]),
-                    static_cast<unsigned short>(indices[i + 1]),
-                    static_cast<unsigned short>(indices[i + 2])
-                });
+                triangles.clear();
+                for (size_t i = 0; i + 2 < indices.size(); i += 3) {
+                    triangles.push_back({
+                        static_cast<unsigned short>(indices[i]),
+                        static_cast<unsigned short>(indices[i + 1]),
+                        static_cast<unsigned short>(indices[i + 2])
+                    });
+                }
             }
-}
 
         }
     
@@ -1376,10 +1376,11 @@ int main( void ){
     std::shared_ptr<SNode> chat = std::make_shared<SNode>(4,vec3(1.0,0.1,0.2));
     // std::shared_ptr<SNode> cube = std::make_shared<SNode>(4,glm::vec3(1.0,0.0,0.0));
     std::shared_ptr<SNode> soleil = std::make_shared<SNode>(0,"pbr/rustediron2_basecolor.png",
-    "pbr/rustediron2_normal.png", 
-    "pbr/rustediron2_roughness.png", 
-    "pbr/rustediron2_metallic.png",
-    "pbr/test_sphere_ao.png"); 
+        "pbr/rustediron2_normal.png", 
+        "pbr/rustediron2_roughness.png", 
+        "pbr/rustediron2_metallic.png",
+        "pbr/test_sphere_ao.png"
+    ); 
     std::shared_ptr<SNode> boule = std::make_shared<SNode>(
         0,
         "pbr/TCom_SolarCells_512_albedo.png",
@@ -1425,52 +1426,72 @@ int main( void ){
     plan->transform.scale = glm::vec3(10.0f);
     std::shared_ptr<SNode> plan2 = std::make_shared<SNode>(3,"textures/grass.png");
     plan2->transform.scale = glm::vec3(2.0f);
-    std::shared_ptr<SNode> tronc = std::make_shared<SNode>(5,"textures/corde_texture.png");
+    
     std::shared_ptr<SNode> mur = std::make_shared<SNode>(6,"textures/rock.png");
-    std::shared_ptr<SNode> plateforme = std::make_shared<SNode>(7, "textures/corde_texture.png");
-    std::shared_ptr<SNode> plateforme2 = std::make_shared<SNode>(7, "textures/corde_texture.png");
-    std::shared_ptr<SNode> plateforme3 = std::make_shared<SNode>(7, "textures/corde_texture.png");
     std::shared_ptr<SNode> mesh_chat_test = std::make_shared<SNode>(8, glm::vec3(0.0f, 0.0f, 0.0f));
 
-
     scene->racine->addFeuille(chat);
-    scene->racine->addFeuille(soleil);
-    scene->racine->addFeuille(boule);
-    scene->racine->addFeuille(boule2);
-    scene->racine->addFeuille(tronc);
-    scene->racine->addFeuille(mur);
-    scene->racine->addFeuille(plan);
-    scene->racine->addFeuille(plan2);
-    scene->racine->addFeuille(plateforme);
-    scene->racine->addFeuille(plateforme2);
-    scene->racine->addFeuille(plateforme3);
-    scene->racine->addFeuille(mesh_chat_test);
 
+    scene->racine->addFeuille(plan);
     plan->addFeuille(mur_p1);
     plan->addFeuille(mur_p2);
     plan->addFeuille(mur_p3);
     plan->addFeuille(mur_p4);
     plan->addFeuille(plafond);
 
+    // ---------------------------------------------- ARBRE ----------------------------------------------
+
+    std::shared_ptr<SNode> tronc = std::make_shared<SNode>(5,"textures/corde_texture.png");
+    tronc->transform.position = glm::vec3(0.0f,0.0f, 0.0f);
+    tronc->grabable = true;
+    scene->racine->addFeuille(tronc);
+
+    std::shared_ptr<SNode> socle = std::make_shared<SNode>(3,"textures/rock.png");
+    socle->transform.scale = glm::vec3(2.0f, 2.0f, 1.0f);
+    tronc->addFeuille(socle);
+
+    std::shared_ptr<SNode> plateforme = std::make_shared<SNode>(7, "textures/corde_texture.png");
+    std::shared_ptr<SNode> plateforme2 = std::make_shared<SNode>(7, "textures/corde_texture.png");
+    std::shared_ptr<SNode> plateforme3 = std::make_shared<SNode>(7, "textures/corde_texture.png");
+    plateforme->transform.position = glm::vec3(3., 3., 3.);
+    plateforme->transform.scale = glm::vec3(0.5f,1.0f,0.5f);
+    plateforme2->transform.position = glm::vec3(-6., 6., 6.);
+    plateforme2->transform.scale = glm::vec3(0.5f,1.0f,0.5f);
+    plateforme3->transform.position = glm::vec3(9., 9., 9.);
+    plateforme3->transform.rotation = glm::vec3(0.2f, 0.0f, 0.0f);
+    plateforme3->transform.scale = glm::vec3(0.5f,1.0f,0.5f);
+    tronc->addFeuille(plateforme);
+    tronc->addFeuille(plateforme2);
+    tronc->addFeuille(plateforme3);
+    
+    //tronc->transform.rotation = glm::vec3(0.0, 0.0, 5.0);
+
+    scene->racine->addFeuille(soleil);
+    scene->racine->addFeuille(boule);
+    scene->racine->addFeuille(boule2);
+    
+    // scene->racine->addFeuille(mur);
+    
+    // scene->racine->addFeuille(plan2);
+    // scene->racine->addFeuille(plateforme);
+    // scene->racine->addFeuille(plateforme2);
+    // scene->racine->addFeuille(plateforme3);
+    // scene->racine->addFeuille(mesh_chat_test);
+
+
     scene->add_light(glm::vec3(1., 1., 1.));
     scene->add_light(glm::vec3(chat->transform.position));
 
-    soleil->transform.position = glm::vec3(-1.0f,5.0f,1.0f);
-    boule->transform.position = glm::vec3(-4.0f,0.5f,2.0f);
-    boule2->transform.position = glm::vec3(-3.0f,0.5f,0.0f);
+    soleil->transform.position = glm::vec3(-1.0f,15.0f,1.0f);
+    boule->transform.position = glm::vec3(-4.0f,5.5f,2.0f);
+    boule2->transform.position = glm::vec3(-4.0f,20.5f,-10.0f);
     boule2->transform.scale = glm::vec3(2.0f, 2.0f, 2.0f);
-    tronc->transform.position = glm::vec3(0.0f,0.0f, 0.0f);
-    tronc->grabable = true;
+    
     chat->transform.position = glm::vec3(-1.0f,2.0f,-1.0f);
-    plan2->transform.position = glm::vec3(0.0f,4.65f,-9.65f);
-    mur->transform.position = glm::vec3(0.0f,0.0f,-5.0f);
-    plateforme->transform.position = glm::vec3(3., 3., 3.);
-    plateforme2->transform.position = glm::vec3(6., 6., 6.);
-    plateforme3->transform.position = glm::vec3(9., 9., 9.);
-    plateforme3->transform.rotation = glm::vec3(0.2f, 0.0f, 0.0f);
-    tronc->transform.rotation = glm::vec3(0.0, 0.0, 5.0);
-    mesh_chat_test->transform.scale = glm::vec3(10.0f);
-    mesh_chat_test->transform.position = glm::vec3(20., 0., 20.);
+    // plan2->transform.position = glm::vec3(0.0f,4.65f,-9.65f);
+    // mur->transform.position = glm::vec3(0.0f,0.0f,-5.0f);
+    // mesh_chat_test->transform.scale = glm::vec3(10.0f);
+    // mesh_chat_test->transform.position = glm::vec3(20., 0., 20.);
 
     initImgui();
 
