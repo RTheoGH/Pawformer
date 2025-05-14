@@ -521,6 +521,8 @@ public:
     std::vector<glm::vec3> tangents;
     std::vector<std::vector<unsigned short>> triangles;
 
+    glm::mat4 lastModelMatrix = glm::mat4(1.0f);
+
     // Constructeurs
     SNode(int obj,const char* texturePath){
         type_objet = obj;
@@ -671,11 +673,9 @@ public:
     std::vector<std::shared_ptr<SNode>> getFeuilles(){
         std::vector<std::shared_ptr<SNode>> liste_feuilles;
         for(const std::shared_ptr<SNode>& feuille: feuilles){
-            if(feuille->feuilles.empty()) liste_feuilles.push_back(feuille);
-            else{
-                for(const std::shared_ptr<SNode>& f: feuille->getFeuilles()){
-                    liste_feuilles.push_back(f);
-                }
+            liste_feuilles.push_back(feuille);
+            for(const std::shared_ptr<SNode>& f: feuille->getFeuilles()){
+                liste_feuilles.push_back(f);
             }
         }
         return liste_feuilles;
@@ -978,11 +978,22 @@ void processSphereCollision(glm::vec3 &pos_chat, std::shared_ptr<SNode> sphere, 
         offset = glm::normalize(offset);
         float cosCollision = glm::dot(glm::vec3(0., 1., 0.), offset);
 
+        // FOLLOW SPHERE ROTATION if on top
         if (cosCollision > 0.5f) {
             plan_hauteur = (sphere->transform.position + offset * rayon_sphere).y;
             isFalling = false;
             pos_chat.y = plan_hauteur + rayon_chat;
-        }else if(cosCollision < 0.0f){
+
+            // Suivi rotation sphère
+            glm::mat4 currentModel = sphere->getModelMatrix();
+            glm::mat4 delta = glm::inverse(sphere->lastModelMatrix) * currentModel;
+
+            glm::vec4 localPos = glm::inverse(sphere->lastModelMatrix) * glm::vec4(pos_chat, 1.0f);
+            pos_chat = glm::vec3(currentModel * localPos);
+
+            sphere->lastModelMatrix = currentModel;
+        }
+        else if (cosCollision < 0.0f) {
             isJumping = false;
         } 
         else {
@@ -994,6 +1005,7 @@ void processSphereCollision(glm::vec3 &pos_chat, std::shared_ptr<SNode> sphere, 
     }
 }
 
+
 bool checkCollisionCylindre(glm::vec3 &pos_chat, float rayon_chat, glm::vec3 pos_cylindre, float rayon_cylindre, float hauteur_cylindre){
     if(pos_chat.y+rayon_chat < pos_cylindre.y || pos_chat.y-rayon_chat > pos_cylindre.y+hauteur_cylindre) return false;
     if(glm::length(glm::vec3(pos_cylindre.x, pos_chat.y, pos_cylindre.z) - pos_chat) > rayon_chat+rayon_cylindre) return false;
@@ -1004,6 +1016,7 @@ void processCylindreCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNod
     // Récupérer la matrice de transformation complète du cylindre
     glm::mat4 model = cylindre->getModelMatrix();
     glm::mat4 invModel = glm::inverse(model);
+    glm::mat4 delta = glm::inverse(cylindre->lastModelMatrix) * model;
 
     // Passer la position du chat dans le repère local du cylindre
     glm::vec3 worldChatPos = chat->transform.position;
@@ -1054,6 +1067,9 @@ void processCylindreCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNod
                 plan_hauteur = contactPos.y - rayon_chat;
                 chat->transform.position.y = contactPos.y;
                 isFalling = false;
+                glm::vec4 relativePos = glm::inverse(cylindre->lastModelMatrix) * glm::vec4(chat->transform.position, 1.0f);
+                glm::vec3 rotatedPos = glm::vec3(model * relativePos);
+                chat->transform.position = rotatedPos;
             }
 
             else if (localChatPos.y < 0.0f + rayon_chat) {
@@ -1175,6 +1191,7 @@ void processMeshCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> m
 
     glm::mat4 model = mesh->getModelMatrix();
     glm::mat4 invModel = glm::inverse(model);
+    glm::mat4 delta = glm::inverse(mesh->lastModelMatrix) * model;
 
     glm::vec3 worldChatPos = chat->transform.position;
     glm::vec3 localChatPos = glm::vec3(invModel * glm::vec4(worldChatPos, 1.0f));
@@ -1223,6 +1240,9 @@ void processMeshCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> m
             plan_hauteur = glm::vec3(model * glm::vec4(localCorrection, 1.0f)).y;
             chat->transform.position.y = plan_hauteur;
             isFalling = false;
+            glm::vec4 relativePos = glm::inverse(mesh->lastModelMatrix) * glm::vec4(chat->transform.position, 1.0f);
+            glm::vec3 rotatedPos = glm::vec3(model * relativePos);
+            chat->transform.position = rotatedPos;
         }
         else if(cosCollision < 0.0f){
             chat->transform.position = glm::vec3(model * glm::vec4(localCorrection, 1.0f));
@@ -1254,6 +1274,8 @@ bool input_toggle(int pressed_key, int &previous_state_key, bool &toggle_bool){
 	}
     return is_toggled;
 }
+
+
 
 int main( void ){
     // Initialise GLFW
@@ -1468,7 +1490,7 @@ int main( void ){
     plateforme2->transform.position = glm::vec3(6., 6., 6.);
     plateforme3->transform.position = glm::vec3(9., 9., 9.);
     plateforme3->transform.rotation = glm::vec3(0.2f, 0.0f, 0.0f);
-    tronc->transform.rotation = glm::vec3(0.0, 0.0, 5.0);
+    // tronc->transform.rotation = glm::vec3(0.0, 0.0, 5.0);
     mesh_chat_test->transform.scale = glm::vec3(10.0f);
     mesh_chat_test->transform.position = glm::vec3(20., 0., 20.);
 
@@ -1508,6 +1530,8 @@ int main( void ){
             chat->transform.rotation += glm::vec3(0.0f,1.0f,0.0f) * (deltaTime*18);
             chat->transform.position.y += deltaTime*10;
         }
+
+        mesh_chat_test->transform.rotation += glm::vec3(0.0f, 0.01f, 0.0f);
 
         GLuint PBRID = glGetUniformLocation(programID,"PBR_OnOff");
         glUniform1i(PBRID,(PBR_OnOff) ? 1 : 0);
@@ -1551,6 +1575,7 @@ int main( void ){
             processCylindreCollision(chat, object, plan_hauteur);
             processMurCollision(chat, object);
             processMeshCollision(chat, object, plan_hauteur);
+            object->lastModelMatrix = object->getModelMatrix();
         }
 
         // Clear the screen
@@ -1778,6 +1803,7 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> chat,ma_engine engi
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !isJumping && !isFalling){
         isJumping = true;
         chat->transform.position.y += deltaTime;
+
     } 
 }
 
