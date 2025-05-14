@@ -715,7 +715,7 @@ public:
             glm::radians(angle_perspective),
             (float)SCR_WIDTH / (float)SCR_HEIGHT,
             0.1f,
-            100.0f
+            200.0f
         );
 
         MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
@@ -723,7 +723,7 @@ public:
         glUniformMatrix4fv(MatrixID,1,GL_FALSE,&MVP[0][0]);
 
         GLuint isColorID = glGetUniformLocation(shaderProgram,"isColor");
-        glUniform1i(isColorID,(type_objet == 4) ? 1 : 0);
+        glUniform1i(isColorID,(type_objet == 4) ? 0 : 0);
 
         GLuint colorLocation = glGetUniformLocation(shaderProgram,"objColor");
         // std::cout << "couleur :" << color[0] << std::endl;
@@ -1085,8 +1085,6 @@ void processCylindreCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNod
             }
         }
     }
-
-
 }
 
 void processMurCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> mur) {
@@ -1396,7 +1394,8 @@ int main( void ){
 
     // std::shared_ptr<SNode> cube = std::make_shared<SNode>(3,glm::vec3(1.0,0.0,0.0));
     // std::shared_ptr<SNode> cube = std::make_shared<SNode>(3,"textures/rock.png");
-    std::shared_ptr<SNode> chat = std::make_shared<SNode>(4,vec3(1.0,0.1,0.2));
+    // std::shared_ptr<SNode> chat = std::make_shared<SNode>(4,vec3(1.0,0.1,0.2));
+    std::shared_ptr<SNode> chat = std::make_shared<SNode>(4,"modeles/fure.png");
     // std::shared_ptr<SNode> cube = std::make_shared<SNode>(4,glm::vec3(1.0,0.0,0.0));
     std::shared_ptr<SNode> soleil = std::make_shared<SNode>(0,"pbr/rustediron2_basecolor.png",
         "pbr/rustediron2_normal.png", 
@@ -1429,11 +1428,11 @@ int main( void ){
     //     std::vector<const char*>{"modeles/sphere2.off","modeles/sphere.off"}
     // );
 
-    std::shared_ptr<SNode> mur_p1 = std::make_shared<SNode>(6,"textures/rock.png");
-    std::shared_ptr<SNode> mur_p2 = std::make_shared<SNode>(6,"textures/rock.png");
-    std::shared_ptr<SNode> mur_p3 = std::make_shared<SNode>(6,"textures/rock.png");
-    std::shared_ptr<SNode> mur_p4 = std::make_shared<SNode>(6,"textures/rock.png");
-    std::shared_ptr<SNode> plafond = std::make_shared<SNode>(1,"textures/rock.png");
+    std::shared_ptr<SNode> mur_p1 = std::make_shared<SNode>(6,"textures/interieur.jpg");
+    std::shared_ptr<SNode> mur_p2 = std::make_shared<SNode>(6,"textures/interieur.jpg");
+    std::shared_ptr<SNode> mur_p3 = std::make_shared<SNode>(6,"textures/interieur.jpg");
+    std::shared_ptr<SNode> mur_p4 = std::make_shared<SNode>(6,"textures/interieur.jpg");
+    std::shared_ptr<SNode> plafond = std::make_shared<SNode>(1,"textures/interieur.jpg");
 
     mur_p1->transform.position = glm::vec3(0.0,0.0,-5.0f);
     mur_p2->transform.position = glm::vec3(4.685,0.0,-0.315f);
@@ -1496,7 +1495,7 @@ int main( void ){
     cube->transform.scale = glm::vec3(2.0f);
     plateforme->addFeuille(cube);
 
-    std::shared_ptr<SNode> chat_noir = std::make_shared<SNode>(8, glm::vec3(0.0f, 0.0f, 0.0f));
+    std::shared_ptr<SNode> chat_noir = std::make_shared<SNode>(8, "modeles/fure.png");
     chat_noir->transform.position = glm::vec3(1.5f,1.75f,-1.5f);
     chat_noir->transform.scale = glm::vec3(1.5f);
     plateforme2->addFeuille(chat_noir);
