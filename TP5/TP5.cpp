@@ -6,9 +6,10 @@
 #include <memory>
 #include <iostream>
 #include <numeric>
-#include <imgui/imgui.h>
-#include <imgui/imgui_impl_glfw.h>
-#include <imgui/imgui_impl_opengl3.h>
+
+#include "../imgui/imgui.h"
+#include "../imgui/imgui_impl_glfw.h"
+#include "../imgui/imgui_impl_opengl3.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -98,15 +99,36 @@ int o_p_s = GLFW_RELEASE;
 
 /*******************************************************************************/
 
-void initImgui()
-{
+void initImgui(GLFWwindow* window){
+    std::cout << "[ImGui] Initialisation..." << std::endl;
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    std::cout << "[ImGui] Context créé." << std::endl;
+
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.FontGlobalScale = 3.f;
     ImGui::StyleColorsDark();
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init("#version 330");
+
+    if (!ImGui_ImplGlfw_InitForOpenGL(window, true)) {
+        std::cerr << "[ImGui] Erreur Init GLFW backend!" << std::endl;
+    } else {
+        std::cout << "[ImGui] GLFW backend OK." << std::endl;
+    }
+
+    if (!ImGui_ImplOpenGL3_Init("#version 330")) {
+        std::cerr << "[ImGui] Erreur Init OpenGL3 backend!" << std::endl;
+    } else {
+        std::cout << "[ImGui] OpenGL3 backend OK." << std::endl;
+    }
 }
+
+ImGuiWindowFlags flags = ImGuiWindowFlags_NoInputs 
+                       | ImGuiWindowFlags_NoTitleBar 
+                       | ImGuiWindowFlags_NoResize 
+                       | ImGuiWindowFlags_NoMove 
+                       | ImGuiWindowFlags_NoScrollbar 
+                       | ImGuiWindowFlags_NoCollapse 
+                       | ImGuiWindowFlags_NoFocusOnAppearing;
 
 // Chargeur de texture
 GLuint loadTexture(const char* filename) {
@@ -254,8 +276,6 @@ void plateforme(std::vector<glm::vec3> &vertices, std::vector<glm::vec2> &uvs, s
     }
 }
 
-
-
 void plan(std::vector<glm::vec3> &vertices,std::vector<glm::vec2> &uvs,std::vector<unsigned short> &indices, std::vector<glm::vec3> &normals){
     float taille = 10.0f;
     float m = taille / 2.0f;
@@ -363,8 +383,6 @@ void mur(std::vector<glm::vec3> &vertices, std::vector<glm::vec2> &uvs, std::vec
         }
     }
 }
-
-
 
 float getTerrainHeight(float x, float z, const std::vector<glm::vec3>& vertices, const std::vector<unsigned short>& indices, const unsigned char* heightmapData, int heightmapWidth, int heightmapHeight) {
     float taille = 10.0f;
@@ -492,8 +510,6 @@ void computeTangentsFromMesh(
         t = glm::normalize(t);
     }
 }
-
-
 
 class SNode : public std::enable_shared_from_this<SNode> {
 public:
@@ -963,8 +979,6 @@ void processGrabInput(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> graba
     }
 }
 
-
-
 void processSphereCollision(glm::vec3 &pos_chat, std::shared_ptr<SNode> sphere, float &plan_hauteur) {
     if ((sphere->type_objet == 2 || sphere->type_objet == 0) &&
         checkCollisionSpheres(pos_chat, rayon_chat, sphere->transform.position, sphere->transform.scale[0])) {
@@ -1004,7 +1018,6 @@ void processSphereCollision(glm::vec3 &pos_chat, std::shared_ptr<SNode> sphere, 
         }
     }
 }
-
 
 bool checkCollisionCylindre(glm::vec3 &pos_chat, float rayon_chat, glm::vec3 pos_cylindre, float rayon_cylindre, float hauteur_cylindre){
     if(pos_chat.y+rayon_chat < pos_cylindre.y || pos_chat.y-rayon_chat > pos_cylindre.y+hauteur_cylindre) return false;
@@ -1274,8 +1287,6 @@ bool input_toggle(int pressed_key, int &previous_state_key, bool &toggle_bool){
     return is_toggled;
 }
 
-
-
 int main( void ){
     // Initialise GLFW
     if( !glfwInit() )
@@ -1295,7 +1306,7 @@ int main( void ){
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // Open a window and create its OpenGL context
-    window = glfwCreateWindow( 1024, 768, "TP5 - GLFW", NULL, NULL);
+    window = glfwCreateWindow( 1800, 1400, "TP5 - GLFW", NULL, NULL);
     if( window == NULL ){
         fprintf( stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n" );
         getchar();
@@ -1531,7 +1542,7 @@ int main( void ){
     // mesh_chat_test->transform.scale = glm::vec3(10.0f);
     // mesh_chat_test->transform.position = glm::vec3(20., 0., 20.);
 
-    initImgui();
+    initImgui(window);
 
     std::cout<<"nb feuilles :"<<scene->racine->getFeuilles().size()<<std::endl;
 
@@ -1631,22 +1642,31 @@ int main( void ){
         GLuint camPosID = glGetUniformLocation(programID,"camPos");
         glUniform3fv(camPosID, 1, &camera_position[0]);
 
-        // Swap buffers
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-        
-        time += deltaTime;
+        // std::cout << "[Loop] Début frame" << std::endl;
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::Begin("Debug Info");
-        ImGui::Text("Hauteur : %.2f m", chat->transform.position.y);
+        // std::cout << "[Loop] ImGui frame commencée" << std::endl;
+
+        ImGui::SetNextWindowSize(ImVec2(400, 75), ImGuiCond_Always);
+        ImGui::Begin("Debug Info", nullptr, flags);
+        ImGui::Text("Hauteur : %.2f m", chat->transform.position.y - 0.85f);
         ImGui::End();
+
+        // std::cout << "[Loop] Fenêtre affichée" << std::endl;
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        // std::cout << "[Loop] Render OK" << std::endl;
+
+        // Swap buffers
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+        
+        time += deltaTime;
 
     } // Check if the ESC key was pressed or the window was closed
     while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
