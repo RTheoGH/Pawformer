@@ -572,6 +572,7 @@ public:
                 break;
             case 2:
                 calculateUVSphere(vertices,uvs);
+                rayon = 1.0f;
                 break;
             case 3:
                 cube(vertices,uvs,indices);
@@ -601,6 +602,7 @@ public:
                 loadOFF("modeles/sphere2.off",vertices,indices,triangles);
                 calculateUVSphere(vertices,uvs);
                 computeTangentsFromMesh(vertices, uvs, indices, tangents);
+                rayon = 1.0f;
                 break;
         }
 
@@ -980,9 +982,9 @@ void processSphereCollision(glm::vec3 &pos_chat, std::shared_ptr<SNode> sphere, 
 
         // FOLLOW SPHERE ROTATION if on top
         if (cosCollision > 0.5f) {
-            plan_hauteur = (sphere->transform.position + offset * rayon_sphere).y;
+            plan_hauteur = (sphere->transform.position + offset * rayon_sphere).y +rayon_chat;
             isFalling = false;
-            pos_chat.y = plan_hauteur + rayon_chat;
+            pos_chat.y = plan_hauteur;
 
             // Suivi rotation sphère
             glm::mat4 currentModel = sphere->getModelMatrix();
@@ -993,14 +995,13 @@ void processSphereCollision(glm::vec3 &pos_chat, std::shared_ptr<SNode> sphere, 
 
             sphere->lastModelMatrix = currentModel;
         }
-        else if (cosCollision < 0.0f) {
-            isJumping = false;
-        } 
         else {
-            glm::vec3 projectedOffset = glm::normalize(glm::vec3(offset.x, 0.0f, offset.z));
-            glm::vec3 horizontalPos = sphere->transform.position + projectedOffset * (rayon_sphere + rayon_chat);
-            pos_chat.x = horizontalPos.x;
-            pos_chat.z = horizontalPos.z;
+            if (cosCollision < 0.0f) {
+                isJumping = false;
+            }
+            glm::vec3 projectedOffset = (sphere->transform.position + offset * (rayon_sphere + rayon_chat));
+            projectedOffset.y = pos_chat.y;
+            pos_chat = projectedOffset;
         }
     }
 }
@@ -1016,7 +1017,6 @@ void processCylindreCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNod
     // Récupérer la matrice de transformation complète du cylindre
     glm::mat4 model = cylindre->getModelMatrix();
     glm::mat4 invModel = glm::inverse(model);
-    glm::mat4 delta = glm::inverse(cylindre->lastModelMatrix) * model;
 
     // Passer la position du chat dans le repère local du cylindre
     glm::vec3 worldChatPos = chat->transform.position;
@@ -1031,12 +1031,8 @@ void processCylindreCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNod
 
     // Appliquer le scale à hauteur/rayon
     float hauteur_cyl = cylindre->hauteur * cylScale.y;
-    float rayon_cyl = cylindre->rayon * ((cylScale.x + cylScale.z) * rayon_chat);  // moyenne XZ
-
-    float rayon_total = rayon_chat + rayon_cyl;
-
-    if(cylindre->type_objet == 5 && checkCollisionCylindre(localChatPos, rayon_chat, glm::vec3(0.0f), rayon_cyl, hauteur_cyl)){
-        float overlap = rayon_chat + rayon_cyl - glm::length(glm::vec3(0.0f, localChatPos.y, 0.0f) - localChatPos);
+    if(cylindre->type_objet == 5 && checkCollisionCylindre(localChatPos, rayon_chat, glm::vec3(0.0f), cylindre->rayon, hauteur_cyl)){
+        float overlap = rayon_chat + cylindre->rayon - glm::length(glm::vec3(0.0f, localChatPos.y, 0.0f) - localChatPos);
         if (overlap > 0.0f) {
             glm::vec3 offset = glm::normalize(localChatPos - glm::vec3(0.0f, localChatPos.y, 0.0f));
             chat->transform.position += glm::vec3(model * glm::vec4(offset * overlap, 1.0));
@@ -1052,8 +1048,8 @@ void processCylindreCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNod
         // todo : faire un petit saut dans la direction opposée
         
     }
-    if (cylindre->type_objet == 7 && checkCollisionCylindre(localChatPos, rayon_chat, glm::vec3(0.0f), rayon_cyl, hauteur_cyl)) {
-        if (glm::length(glm::vec3(0.0f, localChatPos.y, 0.0f) - localChatPos) <= rayon_chat + rayon_cyl) {
+    if (cylindre->type_objet == 7 && checkCollisionCylindre(localChatPos, rayon_chat, glm::vec3(0.0f), cylindre->rayon, hauteur_cyl)) {
+        if (glm::length(glm::vec3(0.0f, localChatPos.y, 0.0f) - localChatPos) <= rayon_chat + cylindre->rayon) {
 
             // Position dans le repère monde du sommet local touché
             glm::vec3 topWorld = glm::vec3(model * glm::vec4(localChatPos.x, hauteur_cyl, localChatPos.z, 1.0f));
@@ -1080,7 +1076,7 @@ void processCylindreCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNod
                 isFalling = true;
             }
             else{
-                glm::vec3 offset = glm::normalize(localChatPos) * rayon_cyl;
+                glm::vec3 offset = glm::normalize(localChatPos) * cylindre->rayon;
                 chat->transform.position = glm::vec3(model * glm::vec4(offset, 1.0f));
             }
         }
@@ -1580,7 +1576,7 @@ int main( void ){
 
             
         
-        // std::cout << "hauteur :" << plan_hauteur << std::endl;
+        // std::cout << isJumping << std::endl;
 
         if(isJumping){
             chat->transform.position.y += deltaTime * 22.0f;
@@ -1837,10 +1833,9 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> chat,ma_engine engi
     if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS) 
         chat->transform.position += glm::vec3(0.0f, 0.1f, 0.0f);
 
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !isJumping && !isFalling){
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !isJumping && !isFalling && !isGrabbing){
         isJumping = true;
         chat->transform.position.y += deltaTime;
-
     } 
 }
 
