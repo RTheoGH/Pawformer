@@ -1027,6 +1027,8 @@ bool checkCollisionCylindre(glm::vec3 &pos_chat, float rayon_chat, glm::vec3 pos
 }
 
 void processCylindreCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> cylindre, float &plan_hauteur){
+    if(cylindre->type_objet != 5 && cylindre->type_objet != 7) return;
+
     // Récupérer la matrice de transformation complète du cylindre
     glm::mat4 model = cylindre->getModelMatrix();
     glm::mat4 invModel = glm::inverse(model);
@@ -1170,30 +1172,34 @@ void processCubeCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> c
         glm::vec3 rayon_local = glm::vec3(rayon_chat) / scale;
 
         if(checkCubeCollision(localPos, rayon_local)){
-            glm::vec3 overlap = glm::vec3(0.5f + rayon_local); // demi-côté + rayon
-
-            float dx = overlap.x - std::abs(localPos.x);
-            float dy = overlap.y - std::abs(localPos.y);
-            float dz = overlap.z - std::abs(localPos.z);
-
-            // Trouver l'axe de séparation avec la plus petite pénétration
-            if(dx < dy && dx < dz){
-                localPos.x = (localPos.x > 0) ? overlap.x : -overlap.x;
-            } else if(dy < dz){
-                localPos.y = (localPos.y > 0) ? overlap.y : -overlap.y;
-
-                // Si on est repoussé vers le haut, ajuster le plan_hauteur
-                if(localPos.y > 0.0f){
-                    plan_hauteur = glm::vec3(model * glm::vec4(0.0f, 1.0f, 0.0f, 0.0f)).y + cube->transform.position.y;
-                    isFalling = false;
-                }
-            } else {
-                localPos.z = (localPos.z > 0) ? overlap.z : -overlap.z;
+            float maxCoord = localPos.x;
+            unsigned int maxIndex = 0;
+            if(abs(localPos.y) > abs(maxCoord)){
+                maxCoord = localPos.y;
+                maxIndex = 1;
+            }
+            if(abs(localPos.z) > abs(maxCoord)){
+                maxCoord = localPos.z;
+                maxIndex = 2;
             }
 
-            // Repasser dans le monde
-            glm::vec3 correctedWorldPos = glm::vec3(model * glm::vec4(localPos, 1.0f));
-            chat->transform.position = correctedWorldPos;
+            glm::vec3 newPos = localPos;
+            int signe = 1;
+            if(maxCoord < 0) signe = -1;
+            newPos[maxIndex] = signe * (0.5 + rayon_local[maxIndex]);
+            float cosCollision = glm::dot(glm::normalize(localPos), glm::normalize(newPos));;
+            glm::vec3 newPosWorld = glm::vec3(model * glm::vec4(newPos, 1.0f));
+            if(cosCollision > 0.5){
+                plan_hauteur = newPosWorld.y;
+                isFalling = false;
+            }
+            if(cosCollision < 0.0){
+                isJumping = false;
+            }
+            chat->transform.position = newPosWorld;
+            glm::vec4 relativePos = glm::inverse(cube->lastModelMatrix) * glm::vec4(chat->transform.position, 1.0f);
+            glm::vec3 rotatedPos = glm::vec3(model * relativePos);
+            chat->transform.position = rotatedPos;
         }
     }
 }
@@ -1633,7 +1639,7 @@ int main( void ){
             chat->transform.position.y += deltaTime*10;
         }
 
-        chat_noir->transform.rotation += glm::vec3(0.0f, 0.01f, 0.0f);
+        cube->transform.rotation += glm::vec3(0.0f, 0.01f, 0.0f);
 
         GLuint PBRID = glGetUniformLocation(programID,"PBR_OnOff");
         glUniform1i(PBRID,(PBR_OnOff) ? 1 : 0);
