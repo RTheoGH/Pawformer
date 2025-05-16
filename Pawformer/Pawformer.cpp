@@ -86,7 +86,7 @@ bool isJumping = false;
 bool isFalling = false;
 bool isGrabbing = false;
 
-double gravite = 10.0f;
+double gravite = 30.0f;
 double masse_chat = 2.0f;
 glm::vec3 acceleration = glm::vec3(0.0f,-gravite,0.0f);
 glm::vec3 vitesse = glm::vec3(0.0f);
@@ -1103,6 +1103,7 @@ void processSphereCollision(glm::vec3 &pos_chat, std::shared_ptr<SNode> sphere, 
         else {
             if (cosCollision < 0.0f) {
                 isJumping = false;
+                vitesse.y = 0.0f;
             }
             glm::vec3 projectedOffset = (sphere->transform.position + offset * (rayon_sphere + rayon_chat));
             projectedOffset.y = pos_chat.y;
@@ -1155,6 +1156,7 @@ void processCylindreCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNod
 
         if (cylindre->grabable && glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
             isGrabbing = true;
+            vitesse.y = 0.;
             chat->transform.rotation = glm::vec3(glm::radians(90.0f), 0.0f, 0.0f);
 
             // Initialiser l'angle une seule fois
@@ -1180,8 +1182,9 @@ void processCylindreCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNod
             if (localChatPos.y >= hauteur_cyl - rayon_chat) {
                 
                 glm::vec3 contactPos = topWorld + cylUp * rayon_chat;
-                plan_hauteur = contactPos.y - rayon_chat;
+                plan_hauteur = contactPos.y;
                 chat->transform.position.y = contactPos.y;
+                vitesse.y = 0.0f;
                 isFalling = false;
                 glm::vec4 relativePos = glm::inverse(cylindre->lastModelMatrix) * glm::vec4(chat->transform.position, 1.0f);
                 glm::vec3 rotatedPos = glm::vec3(model * relativePos);
@@ -1193,6 +1196,7 @@ void processCylindreCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNod
                 chat->transform.position = bottomWorld - cylUp * rayon_chat;
                 isJumping = false;
                 isFalling = true;
+                vitesse.y = 0.0f;
             }
             else{
                 glm::vec3 offset = glm::normalize(localChatPos) * cylindre->rayon;
@@ -1294,6 +1298,7 @@ void processCubeCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> c
             if(cosCollision < -0.5){
                 isJumping = false;
                 isFalling = true;
+                vitesse.y = 0.0f;
             }
             chat->transform.position = newPosWorld;
             glm::vec4 relativePos = glm::inverse(cube->lastModelMatrix) * glm::vec4(chat->transform.position, 1.0f);
@@ -1419,6 +1424,7 @@ void processMeshCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> m
             chat->transform.position = glm::vec3(model * glm::vec4(localCorrection, 1.0f));
             isJumping = false;
             isFalling = true;
+            vitesse.y = 0.0f;
         }
         else{
             chat->transform.position = glm::vec3(model * glm::vec4(localCorrection, 1.0f));
@@ -1926,7 +1932,7 @@ int main( void ){
     std::vector<unsigned short> terrainIndices = plan->indices;
 
 
-    float plan_hauteur = gethauteur(scene,chat);
+    float plan_hauteur = gethauteur(scene,chat)+chat->transform.scale.y;
 
     do{
         // Measure speed
@@ -1965,14 +1971,17 @@ int main( void ){
 
         float hauteur_chat = chat->transform.scale.y;
         // plan_hauteur = gethauteur(scene,chat);
-        float seuil_sol = plan_hauteur + hauteur_chat;
+        float seuil_sol = plan_hauteur;
 
         bool auSol = chat->transform.position.y <= seuil_sol;
 
         // std::cout << "seuil_sol : " << seuil_sol << std::endl;
         // std::cout << "chat pos : " << chat->transform.position.y << std::endl;
         // std::cout << auSol << std::endl;
-
+        if(!isGrabbing){
+            isJumping = false;
+            isFalling = true;
+        }
         if(isJumping || isFalling){
             if(isGrabbing){
                 isFalling = false;
@@ -1984,7 +1993,7 @@ int main( void ){
             chat->transform.position += vitesse * deltaTime;
 
             if (chat->transform.position.y <= seuil_sol) {
-                plan_hauteur = gethauteur(scene,chat);
+                plan_hauteur = gethauteur(scene,chat)+hauteur_chat;
                 chat->transform.position.y = seuil_sol;
                 vitesse.y = 0.0f;
                 isJumping = false;
@@ -2269,9 +2278,9 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> chat,glm::vec3& vit
         chat->transform.position += glm::vec3(0.0f, 0.1f, 0.0f);
 
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !isJumping && !isFalling && !isGrabbing){
-        std::cout << "SAUT !" << std::endl;
+        // std::cout << "SAUT !" << std::endl;
         isJumping = true;
-        vitesse.y = 10.0f;
+        vitesse.y = 20.0f;
     } 
 }
 
