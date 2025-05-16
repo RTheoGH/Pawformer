@@ -28,6 +28,7 @@ GLFWwindow* window;
 #include <glm/glm.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/string_cast.hpp>
 #include <iostream>
 
 using namespace glm;
@@ -1187,10 +1188,11 @@ void processCubeCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> c
             int signe = 1;
             if(maxCoord < 0) signe = -1;
             newPos[maxIndex] = signe * (0.5 + rayon_local[maxIndex]);
-            float cosCollision = glm::dot(glm::normalize(localPos), glm::normalize(newPos));;
+            float cosCollision = glm::dot(glm::normalize(newPos - glm::vec3(0.f)), glm::vec3(0.f, 1.f, 0.f));
             glm::vec3 newPosWorld = glm::vec3(model * glm::vec4(newPos, 1.0f));
             if(cosCollision > 0.5){
-                plan_hauteur = newPosWorld.y;
+                std::cout<<"cosCollision : "<<cosCollision<<std::endl;
+                plan_hauteur = newPosWorld.y + rayon_chat;
                 isFalling = false;
             }
             if(cosCollision < 0.0){
@@ -1571,6 +1573,10 @@ int main( void ){
     chat_noir->transform.scale = glm::vec3(1.5f);
     plateforme2->addFeuille(chat_noir);
     
+    std::shared_ptr<SNode> cube2 = std::make_shared<SNode>(3, "textures/snowrocks.png");
+    cube2->transform.position = glm::vec3(10.f, 4.f, 10.f);
+    cube2->transform.scale = glm::vec3(3.f);
+
     //tronc->transform.rotation = glm::vec3(0.0, 0.0, 5.0);
     
     soleil->transform.position = glm::vec3(-1.0f,15.0f,1.0f);
@@ -1582,6 +1588,7 @@ int main( void ){
     scene->racine->addFeuille(soleil);
     scene->racine->addFeuille(boule);
     scene->racine->addFeuille(boule2);
+    scene->racine->addFeuille(cube2);
     
     // scene->racine->addFeuille(mur);
     
@@ -1639,7 +1646,7 @@ int main( void ){
             chat->transform.position.y += deltaTime*10;
         }
 
-        cube->transform.rotation += glm::vec3(0.0f, 0.01f, 0.0f);
+        cube2->transform.rotation += glm::vec3(0.0f, 0.01f, 0.0f);
 
         GLuint PBRID = glGetUniformLocation(programID,"PBR_OnOff");
         glUniform1i(PBRID,(PBR_OnOff) ? 1 : 0);
@@ -1648,10 +1655,6 @@ int main( void ){
 
         float hauteur_chat = chat->transform.scale.y;
         if(!isJumping) plan_hauteur = gethauteur(scene,chat);
-
-            
-        
-        // std::cout << isJumping << std::endl;
 
         if(isJumping){
             chat->transform.position.y += deltaTime * 22.0f;
