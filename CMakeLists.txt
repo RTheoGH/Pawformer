@@ -53,11 +53,11 @@ add_definitions(
 	-D_CRT_SECURE_NO_WARNINGS
 )
 
-# TP5
+# Pawformer
 file( GLOB IMGUIC imgui/*.cpp) 
 file( GLOB IMGUIH imgui/*.h) 
-add_executable(TP5
-        TP5/TP5.cpp
+add_executable(Pawformer
+        Pawformer/Pawformer.cpp
 	common/shader.cpp
 	common/shader.hpp
 	common/controls.cpp
@@ -70,18 +70,18 @@ add_executable(TP5
 	common/vboindexer.hpp
 
 	
-        TP5/vertex_shader.glsl
-        TP5/fragment_shader.glsl
+        Pawformer/vertex_shader.glsl
+        Pawformer/fragment_shader.glsl
 
 		${IMGUIH}
 		${IMGUIC}
 )
-target_link_libraries(TP5
+target_link_libraries(Pawformer
 	${ALL_LIBS}
 )
 # Xcode and Visual working directories
-set_target_properties(TP5 PROPERTIES XCODE_ATTRIBUTE_CONFIGURATION_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/TP5/")
-create_target_launcher(TP5 WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/TP5/")
+set_target_properties(Pawformer PROPERTIES XCODE_ATTRIBUTE_CONFIGURATION_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Pawformer/")
+create_target_launcher(Pawformer WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Pawformer/")
 
 
 
@@ -92,8 +92,8 @@ SOURCE_GROUP(shaders REGULAR_EXPRESSION ".*/.*shader$" )
 
 if (NOT ${CMAKE_GENERATOR} MATCHES "Xcode" )
 add_custom_command(
-   TARGET TP5 POST_BUILD
-   COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/TP5${CMAKE_EXECUTABLE_SUFFIX}" "${CMAKE_CURRENT_SOURCE_DIR}/TP5/"
+   TARGET Pawformer POST_BUILD
+   COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Pawformer${CMAKE_EXECUTABLE_SUFFIX}" "${CMAKE_CURRENT_SOURCE_DIR}/Pawformer/"
 )
 elseif (${CMAKE_GENERATOR} MATCHES "Xcode" )
 
