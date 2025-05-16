@@ -1026,12 +1026,9 @@ float gethauteur(std::shared_ptr<Scene> scene,std::shared_ptr<SNode> chat){
     return hauteurMax;
 }
 
-void processGrabInput(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> grabable_object){
+void processGrabInput(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> grabable_object, float initialGrabAngle){
     if(grabable_object->type_objet == 5){
-        static float angle = 0.0f;
-
-        // Rayon local
-        float rayon_obj = grabable_object->rayon + rayon_chat;
+        static float angle = initialGrabAngle;
 
         // Matrices
         glm::mat4 model = grabable_object->getModelMatrix();
@@ -1058,18 +1055,19 @@ void processGrabInput(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> graba
         }
 
         // Nouvelle position locale autour du cylindre
-        localPosChat.x = cos(angle) * rayon_obj;
-        localPosChat.z = sin(angle) * rayon_obj;
+        localPosChat.x = cos(angle) * grabable_object->rayon;
+        localPosChat.z = sin(angle) * grabable_object->rayon;
 
-        // Transformer cette position locale en monde
+        glm::vec3 center_local = glm::vec3(0.0f, localPosChat.y, 0.0f);
+        glm::vec3 dir_local = glm::normalize(center_local - localPosChat);
+
+        // Ajout du rayon du chat dans la direction radiale (non soumis au scale)
+        localPosChat -= dir_local * rayon_chat;
+
         glm::vec3 newWorldPos = glm::vec3(model * glm::vec4(localPosChat, 1.0f));
         chat->transform.position = newWorldPos;
 
-        // Facultatif : Orienter le chat vers le cylindre
-        glm::vec3 center_local = glm::vec3(0.0f, localPosChat.y, 0.0f);
-        glm::vec3 dir_local = glm::normalize(center_local - localPosChat);
         glm::vec3 dir_world = glm::mat3(model) * dir_local;
-
         chat->transform.rotation.y = atan2(dir_world.x, dir_world.z);
     }
 }
@@ -1137,10 +1135,14 @@ void processCylindreCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNod
         glm::length(glm::vec3(model[2]))   // Z
     );
 
-    float rayon_local = 0.5f;
+    float rayon_local = 0.5f * cylScale[0];
     float hauteur_cyl = cylindre->hauteur * cylScale.y;
 
-    if (cylindre->type_objet == 5 && checkCollisionCylindre(localChatPos, rayon_chat, glm::vec3(0.0f), rayon_local, hauteur_cyl)) {
+    glm::vec3 adjustedLocalPos = localChatPos;
+    adjustedLocalPos.y -= rayon_chat; // Décale vers les "pattes" du chat
+
+    if (cylindre->type_objet == 5 && checkCollisionCylindre(adjustedLocalPos, rayon_chat, glm::vec3(0.0f), rayon_local, hauteur_cyl)) {
+
         float dist = glm::length(localChatPos - glm::vec3(0.0f, localChatPos.y, 0.0f));
         float overlap = rayon_chat + rayon_local - dist;
 
@@ -1154,13 +1156,16 @@ void processCylindreCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNod
         if (cylindre->grabable && glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
             isGrabbing = true;
             chat->transform.rotation = glm::vec3(glm::radians(90.0f), 0.0f, 0.0f);
-            processGrabInput(chat, cylindre);
+
+            // Initialiser l'angle une seule fois
+            glm::vec3 dir = glm::normalize(glm::vec3(localChatPos.x, 0.0f, localChatPos.z));
+            float initialGrabAngle = atan2(dir.z, dir.x);  // ⚠️ atan2(y, x) → ici Z, X
+
+            processGrabInput(chat, cylindre, initialGrabAngle);
         } else {
             chat->transform.rotation.x = 0.0f;
         }
     }
-
-
 
     if (cylindre->type_objet == 7 && checkCollisionCylindre(localChatPos, rayon_chat, glm::vec3(0.0f), cylindre->rayon, hauteur_cyl)) {
         if (glm::length(glm::vec3(0.0f, localChatPos.y, 0.0f) - localChatPos) <= rayon_chat + cylindre->rayon) {
@@ -1947,6 +1952,8 @@ int main( void ){
         }
 
         cube2->transform.rotation += glm::vec3(0.0f, 0.01f, 0.0f);
+        
+        // std::cout<<isGrabbing<<std::endl;
 
         GLuint PBRID = glGetUniformLocation(programID,"PBR_OnOff");
         glUniform1i(PBRID,(PBR_OnOff) ? 1 : 0);
