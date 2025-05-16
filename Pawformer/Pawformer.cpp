@@ -277,41 +277,99 @@ void plateforme(std::vector<glm::vec3> &vertices, std::vector<glm::vec2> &uvs, s
     }
 }
 
-void plan(std::vector<glm::vec3> &vertices,std::vector<glm::vec2> &uvs,std::vector<unsigned short> &indices, std::vector<glm::vec3> &normals){
+void computeTangent(const std::vector<glm::vec3>& vertices,
+                    const std::vector<glm::vec2>& uvs,
+                    std::vector<glm::vec3>& tangents,
+                    int i0, int i1, int i2)
+{
+    const glm::vec3 &v0 = vertices[i0];
+    const glm::vec3 &v1 = vertices[i1];
+    const glm::vec3 &v2 = vertices[i2];
+
+    const glm::vec2 &uv0 = uvs[i0];
+    const glm::vec2 &uv1 = uvs[i1];
+    const glm::vec2 &uv2 = uvs[i2];
+
+    glm::vec3 deltaPos1 = v1 - v0;
+    glm::vec3 deltaPos2 = v2 - v0;
+
+    glm::vec2 deltaUV1 = uv1 - uv0;
+    glm::vec2 deltaUV2 = uv2 - uv0;
+
+    float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
+    glm::vec3 tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y) * r;
+
+    tangents[i0] += tangent;
+    tangents[i1] += tangent;
+    tangents[i2] += tangent;
+}
+
+
+
+void plan(std::vector<glm::vec3> &vertices,
+          std::vector<glm::vec2> &uvs,
+          std::vector<unsigned short> &indices,
+          std::vector<glm::vec3> &normals,
+          std::vector<glm::vec3> &tangents)
+{
     float taille = 10.0f;
     float m = taille / 2.0f;
     float pas = taille / (float)sommets;
+
+    int numVerts = (sommets + 1) * (sommets + 1);
+
+    vertices.clear();
+    normals.clear();
+    uvs.clear();
+    indices.clear();
+    tangents.clear();
+
+    vertices.reserve(numVerts);
+    normals.reserve(numVerts);
+    uvs.reserve(numVerts);
+    tangents.resize(numVerts, glm::vec3(0.0f));
 
     for(int i = 0; i <= sommets; i++){
         for(int j = 0; j <= sommets; j++){
             float x = -m + j * pas;
             float z = -m + i * pas;
 
-            vertices.emplace_back(glm::vec3(x,0.0f,z));
+            vertices.emplace_back(glm::vec3(x, 0.0f, z));
             normals.emplace_back(glm::vec3(0.0f, 1.0f, 0.0f));
 
-            float u = (float)j / (float)(sommets-1);
-            float v = (float)i / (float)(sommets-1);
+            float u = (float)j / (float)(sommets - 1);
+            float v = (float)i / (float)(sommets - 1);
 
-            uvs.emplace_back(glm::vec2(u,v));
+            uvs.emplace_back(glm::vec2(u, v));
         }
     }
 
-    for(int i = 0; i < sommets-1; i++){
-        for(int j = 0; j < sommets-1; j++){
-            int topleft = i * (sommets+1) + j;
+    for(int i = 0; i < sommets - 1; i++){
+        for(int j = 0; j < sommets - 1; j++){
+            int topleft = i * (sommets + 1) + j;
             int topright = topleft + 1;
-            int bottomleft = (i+1) * (sommets+1) + j;
+            int bottomleft = (i + 1) * (sommets + 1) + j;
             int bottomright = bottomleft + 1;
 
+            // Triangle 1
             indices.push_back(topleft);
             indices.push_back(bottomleft);
             indices.push_back(topright);
 
+            computeTangent(vertices, uvs, tangents, topleft, bottomleft, topright);
+
+            // Triangle 2
             indices.push_back(topright);
             indices.push_back(bottomleft);
             indices.push_back(bottomright);
+
+            computeTangent(vertices, uvs, tangents, topright, bottomleft, bottomright);
         }
+    }
+
+    // Optionnel : normaliser les tangentes finales
+    for (auto &t : tangents) {
+        t = glm::normalize(t);
     }
 }
 
@@ -585,7 +643,7 @@ public:
     void buffers(){
         switch(type_objet){
             case 1:
-                plan(vertices,uvs,indices, normals); // Plan
+                plan(vertices,uvs,indices, normals, tangents); // Plan
                 break;
             case 2:
                 calculateUVSphere(vertices,uvs);
@@ -1157,7 +1215,7 @@ bool checkCubeCollision(glm::vec3 pos_chat, glm::vec3 rayon){
     return true;
 }
 
-void processCubeCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> cube, float plan_hauteur){
+void processCubeCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> cube, float &plan_hauteur){
     if(cube->type_objet == 3){
         glm::mat4 model = cube->getModelMatrix();
         glm::mat4 invModel = glm::inverse(model);
@@ -1191,12 +1249,12 @@ void processCubeCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> c
             float cosCollision = glm::dot(glm::normalize(newPos - glm::vec3(0.f)), glm::vec3(0.f, 1.f, 0.f));
             glm::vec3 newPosWorld = glm::vec3(model * glm::vec4(newPos, 1.0f));
             if(cosCollision > 0.5){
-                std::cout<<"cosCollision : "<<cosCollision<<std::endl;
-                plan_hauteur = newPosWorld.y + rayon_chat;
+                plan_hauteur = newPosWorld.y;
                 isFalling = false;
             }
-            if(cosCollision < 0.0){
+            if(cosCollision < -0.5){
                 isJumping = false;
+                isFalling = true;
             }
             chat->transform.position = newPosWorld;
             glm::vec4 relativePos = glm::inverse(cube->lastModelMatrix) * glm::vec4(chat->transform.position, 1.0f);
@@ -1634,7 +1692,11 @@ int main( void ){
 
 
     std::shared_ptr<SNode> jump;
-    std::shared_ptr<SNode> plan = std::make_shared<SNode>(1,"textures/plancher.png");
+    std::shared_ptr<SNode> plan = std::make_shared<SNode>(1,"pbr/parquet_albedo.png",
+    "pbr/parquet_normal.png",
+    "pbr/parquet_roughness.png",
+    "pbr/metalness_noir.png",
+    "pbr/parquet_ao.png");
     plan->transform.scale = glm::vec3(10.0f);
     // std::shared_ptr<SNode> plan2 = std::make_shared<SNode>(3,"textures/grass.png");
     // plan2->transform.scale = glm::vec3(2.0f);
@@ -1816,7 +1878,6 @@ int main( void ){
         deltaTime = currentFrame - lastFrame;
         // std::cout << "d : " << deltaTime << std::endl;
         lastFrame = currentFrame;
-        // std::cout<<"("<<chat->transform.position.x<<", "<<chat->transform.position.y<<", "<<chat->transform.position.z<<")"<<std::endl;
 
         // input
         // -----
