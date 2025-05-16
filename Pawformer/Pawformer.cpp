@@ -98,6 +98,9 @@ int p_preview_state = GLFW_RELEASE;
 bool oiia = false;
 int o_p_s = GLFW_RELEASE;
 
+bool person = false;
+int person_state = GLFW_RELEASE;
+
 /*******************************************************************************/
 
 void initImgui(GLFWwindow* window){
@@ -303,8 +306,6 @@ void computeTangent(const std::vector<glm::vec3>& vertices,
     tangents[i1] += tangent;
     tangents[i2] += tangent;
 }
-
-
 
 void plan(std::vector<glm::vec3> &vertices,
           std::vector<glm::vec2> &uvs,
@@ -858,11 +859,14 @@ public:
         glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,0,(void*)0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,ibo);
         
-        glDrawElements(GL_TRIANGLES,
-            indexCPT,
-            GL_UNSIGNED_SHORT,
-            (void*)0
-        );
+        if (!(type_objet == 4 && person)) {
+            glDrawElements(GL_TRIANGLES,
+                indexCPT,
+                GL_UNSIGNED_SHORT,
+                (void*)0
+            );
+        }
+        
 
         glBindVertexArray(0);
         glDisableVertexAttribArray(0);
@@ -2022,6 +2026,8 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> chat,ma_engine engi
         
     input_toggle(GLFW_KEY_P,p_preview_state,PBR_OnOff);
 
+    input_toggle(GLFW_KEY_F5,person_state,person);
+
     if(!cam_attache){
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         if(glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
@@ -2134,15 +2140,29 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> chat,ma_engine engi
         if(glfwGetKey(window,GLFW_KEY_E) == GLFW_PRESS)
             cam_distance -= 3. * deltaTime;
 
+        if(!person){
+            angle_perspective = 45.0;
+            glm::vec3 offset;
+            offset.x = cam_distance * cos(glm::radians(pitch_)) * cos(glm::radians(yaw_));
+            offset.y = cam_distance * sin(glm::radians(pitch_));
+            offset.z = cam_distance * cos(glm::radians(pitch_)) * sin(glm::radians(yaw_));
 
-        glm::vec3 offset;
-        offset.x = cam_distance * cos(glm::radians(pitch_)) * cos(glm::radians(yaw_));
-        offset.y = cam_distance * sin(glm::radians(pitch_));
-        offset.z = cam_distance * cos(glm::radians(pitch_)) * sin(glm::radians(yaw_));
+            camera_position = chat->transform.position + offset;
 
-        camera_position = chat->transform.position + offset;
+            camera_target = glm::normalize(chat->transform.position - camera_position);
+        }else{
+            angle_perspective = 70.0;
+            camera_target.x = cos(glm::radians(pitch_)) * cos(glm::radians(yaw_));
+            camera_target.y = sin(glm::radians(pitch_));
+            camera_target.z = cos(glm::radians(pitch_)) * sin(glm::radians(yaw_));
+            camera_target = -glm::normalize(camera_target);
 
-        camera_target = glm::normalize(chat->transform.position - camera_position);
+            glm::vec3 forward = glm::normalize(glm::vec3(camera_target.x, 0.0f, camera_target.z));
+            camera_position = chat->transform.position + glm::vec3(0.0f, 1.f, 0.0f);
+
+            float rotationY = atan2(forward.x, forward.z);
+            chat->transform.rotation.y = rotationY;
+        }
 
         glfwSetCursorPos(window, width / 2, height / 2);
     }
