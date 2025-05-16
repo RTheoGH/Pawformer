@@ -1146,6 +1146,58 @@ void processMurCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> mu
     }
 }
 
+bool checkCubeCollision(glm::vec3 pos_chat, glm::vec3 rayon){
+    float length_cube = 0.5f;
+    if(pos_chat.x < -(length_cube + rayon.x) || pos_chat.x > length_cube + rayon.x) return false;
+    if(pos_chat.y < -(length_cube + rayon.y) || pos_chat.y > length_cube + rayon.y) return false;
+    if(pos_chat.z < -(length_cube + rayon.z) || pos_chat.z > length_cube + rayon.z) return false;
+    return true;
+}
+
+void processCubeCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> cube, float plan_hauteur){
+    if(cube->type_objet == 3){
+        glm::mat4 model = cube->getModelMatrix();
+        glm::mat4 invModel = glm::inverse(model);
+
+        glm::vec3 localPos = glm::vec3(invModel * glm::vec4(chat->transform.position, 1.0f));
+
+        glm::vec3 scale = glm::vec3(
+            glm::length(glm::vec3(model[0])),  // X axis
+            glm::length(glm::vec3(model[1])),  // Y axis
+            glm::length(glm::vec3(model[2]))   // Z axis
+        );
+
+        glm::vec3 rayon_local = glm::vec3(rayon_chat) / scale;
+
+        if(checkCubeCollision(localPos, rayon_local)){
+            glm::vec3 overlap = glm::vec3(0.5f + rayon_local); // demi-côté + rayon
+
+            float dx = overlap.x - std::abs(localPos.x);
+            float dy = overlap.y - std::abs(localPos.y);
+            float dz = overlap.z - std::abs(localPos.z);
+
+            // Trouver l'axe de séparation avec la plus petite pénétration
+            if(dx < dy && dx < dz){
+                localPos.x = (localPos.x > 0) ? overlap.x : -overlap.x;
+            } else if(dy < dz){
+                localPos.y = (localPos.y > 0) ? overlap.y : -overlap.y;
+
+                // Si on est repoussé vers le haut, ajuster le plan_hauteur
+                if(localPos.y > 0.0f){
+                    plan_hauteur = glm::vec3(model * glm::vec4(0.0f, 1.0f, 0.0f, 0.0f)).y + cube->transform.position.y;
+                    isFalling = false;
+                }
+            } else {
+                localPos.z = (localPos.z > 0) ? overlap.z : -overlap.z;
+            }
+
+            // Repasser dans le monde
+            glm::vec3 correctedWorldPos = glm::vec3(model * glm::vec4(localPos, 1.0f));
+            chat->transform.position = correctedWorldPos;
+        }
+    }
+}
+
 glm::vec3 ClosestPointOnTriangle(glm::vec3 p, glm::vec3 a, glm::vec3 b, glm::vec3 c) {
     // Edges
     glm::vec3 ab = b - a;
@@ -1625,6 +1677,7 @@ int main( void ){
             processCylindreCollision(chat, object, plan_hauteur);
             processMurCollision(chat, object);
             processMeshCollision(chat, object, plan_hauteur);
+            processCubeCollision(chat, object, plan_hauteur);
             object->lastModelMatrix = object->getModelMatrix();
         }
 
