@@ -1331,6 +1331,123 @@ void processMeshCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> m
     }
 }
 
+enum class MovementType {
+    CARRE,
+    LINEAIRE_X,
+    LINEAIRE_Y,
+    LINEAIRE_Z,
+    CIRCULAIRE
+};
+
+struct PlateformeMobile {
+    std::shared_ptr<SNode> node;
+
+    MovementType movementType = MovementType::CARRE;
+    float speed = 5.0f;
+
+    float minX = -10.0f, maxX = 10.0f;
+    float minY = 0.0f,  maxY = 100.0f;
+    float minZ = -10.0f, maxZ = 10.0f;
+
+    int move_state = 0;
+    bool reverse = false;
+    float angle = 0.0f;
+    float radius = 5.0f;
+    glm::vec3 center = {0.0f, 0.0f, 0.0f};
+    float rotationSpeed = 1.0f;
+
+    void update(float deltaTime) {
+        switch (movementType) {
+            case MovementType::CARRE:
+                updateCarre(deltaTime);
+                break;
+            case MovementType::LINEAIRE_X:
+                updateLineaire(deltaTime, 'x', minX, maxX);
+                break;
+            case MovementType::LINEAIRE_Y:
+                updateLineaire(deltaTime, 'y', minY, maxY);
+                break;
+            case MovementType::LINEAIRE_Z:
+                updateLineaire(deltaTime, 'z', minZ, maxZ);
+                break;
+            case MovementType::CIRCULAIRE:
+                updateCirculaire(deltaTime);
+                break;
+        }
+    }
+
+private:
+    void updateCarre(float deltaTime) {
+        float step = deltaTime * speed;
+        auto& pos = node->transform.position;
+
+        switch (move_state) {
+            case 0:
+                pos.z += step;
+                if (pos.z >= maxZ) {
+                    pos.z = maxZ;
+                    move_state = 1;
+                }
+                break;
+            case 1:
+                pos.x += step;
+                if (pos.x >= maxX) {
+                    pos.x = maxX;
+                    move_state = 2;
+                }
+                break;
+            case 2:
+                pos.z -= step;
+                if (pos.z <= minZ) {
+                    pos.z = minZ;
+                    move_state = 3;
+                }
+                break;
+            case 3:
+                pos.x -= step;
+                if (pos.x <= minX) {
+                    pos.x = minX;
+                    move_state = 0;
+                }
+                break;
+        }
+    }
+
+    void updateLineaire(float deltaTime, char axis, float minVal, float maxVal) {
+        float step = deltaTime * speed;
+        glm::vec3& pos = node->transform.position;
+        float* value = nullptr;
+
+        if (axis == 'x') value = &pos.x;
+        else if (axis == 'y') value = &pos.y;
+        else if (axis == 'z') value = &pos.z;
+
+        if (!value) return;
+
+        if (!reverse) {
+            *value += step;
+            if (*value >= maxVal) {
+                *value = maxVal;
+                reverse = true;
+            }
+        } else {
+            *value -= step;
+            if (*value <= minVal) {
+                *value = minVal;
+                reverse = false;
+            }
+        }
+    }
+
+    void updateCirculaire(float deltaTime) {
+        angle += deltaTime * rotationSpeed;
+
+        node->transform.position.x = center.x + radius * cos(angle);
+        node->transform.position.z = center.z + radius * sin(angle);
+        node->transform.position.y = center.y;
+    }
+};
+
 /*******************************************************************************/
 
 void processInput(GLFWwindow *window,std::shared_ptr<SNode> soleil,ma_engine engine);
@@ -1534,11 +1651,11 @@ int main( void ){
     plan->addFeuille(mur_p4);
     plan->addFeuille(plafond);
 
-    // ---------------------------------------------- ARBRE ----------------------------------------------
+    // ---------------------------------------------- ARBRE 1 ----------------------------------------------
 
     std::shared_ptr<SNode> tronc = std::make_shared<SNode>(5,"textures/corde_texture.png");
     tronc->transform.scale = glm::vec3(2.0f);
-    tronc->transform.position = glm::vec3(0.0f,0.0f, 0.0f);
+    tronc->transform.position = glm::vec3(-15.0f,0.0f, 0.0f);
     tronc->grabable = true;
 
     scene->racine->addFeuille(tronc);
@@ -1589,7 +1706,71 @@ int main( void ){
     scene->racine->addFeuille(boule);
     scene->racine->addFeuille(boule2);
     scene->racine->addFeuille(cube2);
-    
+
+    // ---------------------------------------------- ARBRE 2 ----------------------------------------------
+
+    std::shared_ptr<SNode> tronc2 = std::make_shared<SNode>(5,"textures/corde_texture.png");
+    tronc2->transform.scale = glm::vec3(2.0f);
+    tronc2->transform.position = glm::vec3(15.0f, 0.0f, 0.0f);
+    tronc2->grabable = true;
+
+    scene->racine->addFeuille(tronc2);
+
+    std::shared_ptr<SNode> socle2 = std::make_shared<SNode>(3,"textures/rock.png");
+    socle2->transform.scale = glm::vec3(2.0f, 1.0f, 2.0f);
+
+    tronc2->addFeuille(socle2);
+
+    std::shared_ptr<SNode> plateforme_t2 = std::make_shared<SNode>(7, "textures/corde_texture.png");
+    plateforme_t2->transform.position = glm::vec3(3.5f, 2.0f, 0.f);
+    plateforme_t2->transform.scale = glm::vec3(0.5f);
+
+    tronc2->addFeuille(plateforme_t2);
+
+    PlateformeMobile pf;
+    pf.node = plateforme_t2;
+    pf.movementType = MovementType::LINEAIRE_Z;
+    pf.minZ = -3.0f;
+    pf.maxZ = 3.0f;
+
+    std::shared_ptr<SNode> plateforme2_t2 = std::make_shared<SNode>(7, "textures/corde_texture.png");
+    plateforme2_t2->transform.position = glm::vec3(0.0f, 3.5f, -3.f);
+    plateforme2_t2->transform.scale = glm::vec3(0.5f);
+
+    tronc2->addFeuille(plateforme2_t2);
+
+    PlateformeMobile pf2;
+    pf2.node = plateforme2_t2;
+    pf2.movementType = MovementType::LINEAIRE_Y;
+    pf2.minY = 2.0f;
+    pf2.maxY = 20.0f;
+
+    std::shared_ptr<SNode> plateforme3_t2 = std::make_shared<SNode>(7, "textures/corde_texture.png");
+    plateforme3_t2->transform.position = glm::vec3(-3.0f, 5.0f, 0.f);
+    plateforme3_t2->transform.scale = glm::vec3(0.5f);
+
+    tronc2->addFeuille(plateforme3_t2);
+
+    PlateformeMobile pf3;
+    pf3.node = plateforme3_t2;
+    pf3.movementType = MovementType::LINEAIRE_X;
+    pf3.minX = -11.5f;
+    pf3.maxX = -3.5f;
+
+    std::shared_ptr<SNode> plateforme4_t2 = std::make_shared<SNode>(7, "textures/corde_texture.png");
+    plateforme4_t2->transform.position = glm::vec3(3.0f, 15.0f, 0.f);
+    plateforme4_t2->transform.scale = glm::vec3(0.5f);
+
+    tronc2->addFeuille(plateforme4_t2);
+
+    PlateformeMobile pf4;
+    pf4.node = plateforme4_t2;
+    pf4.movementType = MovementType::CARRE;
+    pf4.minX = -18.5f;
+    pf4.maxX = 3.5f;
+    pf4.minZ = -3.5f;
+    pf4.maxZ = 3.5f;
+
     // scene->racine->addFeuille(mur);
     
     // scene->racine->addFeuille(plan2);
@@ -1640,6 +1821,11 @@ int main( void ){
         // input
         // -----
         processInput(window,chat,engine);
+
+        pf.update(deltaTime);
+        pf2.update(deltaTime);
+        pf3.update(deltaTime);
+        pf4.update(deltaTime*2);
 
         if(oiia){
             chat->transform.rotation += glm::vec3(0.0f,1.0f,0.0f) * (deltaTime*18);
