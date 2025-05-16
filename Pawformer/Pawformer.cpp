@@ -407,10 +407,28 @@ void cube(std::vector<glm::vec3> &vertices,std::vector<glm::vec2> &uvs, std::vec
     };
 }
 
-void mur(std::vector<glm::vec3> &vertices, std::vector<glm::vec2> &uvs, std::vector<unsigned short> &indices, std::vector<glm::vec3> &normals){
+void mur(std::vector<glm::vec3> &vertices,
+         std::vector<glm::vec2> &uvs,
+         std::vector<unsigned short> &indices,
+         std::vector<glm::vec3> &normals,
+         std::vector<glm::vec3> &tangents)
+{
     float taille = 10.0f;
     float m = taille / 2.0f;
     float pas = taille / (float)sommets;
+
+    int numVerts = (sommets + 1) * (sommets + 1);
+
+    vertices.clear();
+    normals.clear();
+    uvs.clear();
+    indices.clear();
+    tangents.clear();
+
+    vertices.reserve(numVerts);
+    normals.reserve(numVerts);
+    uvs.reserve(numVerts);
+    tangents.resize(numVerts, glm::vec3(0.0f));
 
     for(int i = 0; i <= sommets; i++){
         for(int j = 0; j <= sommets; j++){
@@ -418,31 +436,41 @@ void mur(std::vector<glm::vec3> &vertices, std::vector<glm::vec2> &uvs, std::vec
             float y = i * pas;
 
             vertices.emplace_back(glm::vec3(x, y, 0.0f));
+            normals.emplace_back(glm::vec3(0.0f, 0.0f, -1.0f)); // face vers -Z
 
-            float u = (float)j / (float)(sommets-1);
-            float v = (float)i / (float)(sommets-1);
-
+            float u = (float)j / (float)(sommets - 1);
+            float v = (float)i / (float)(sommets - 1);
             uvs.emplace_back(glm::vec2(u, v));
         }
     }
 
-    for(int i = 0; i < sommets-1; i++){
-        for(int j = 0; j < sommets-1; j++){
-            int topleft = i * (sommets+1) + j;
+    for(int i = 0; i < sommets - 1; i++){
+        for(int j = 0; j < sommets - 1; j++){
+            int topleft = i * (sommets + 1) + j;
             int topright = topleft + 1;
-            int bottomleft = (i+1) * (sommets+1) + j;
+            int bottomleft = (i + 1) * (sommets + 1) + j;
             int bottomright = bottomleft + 1;
 
+            // Triangle 1
             indices.push_back(topleft);
             indices.push_back(bottomleft);
             indices.push_back(topright);
+            computeTangent(vertices, uvs, tangents, topleft, bottomleft, topright);
 
+            // Triangle 2
             indices.push_back(topright);
             indices.push_back(bottomleft);
             indices.push_back(bottomright);
+            computeTangent(vertices, uvs, tangents, topright, bottomleft, bottomright);
         }
     }
+
+    // Normalisation finale
+    for (auto &t : tangents) {
+        t = glm::normalize(t);
+    }
 }
+
 
 float getTerrainHeight(float x, float z, const std::vector<glm::vec3>& vertices, const std::vector<unsigned short>& indices, const unsigned char* heightmapData, int heightmapWidth, int heightmapHeight) {
     float taille = 10.0f;
@@ -664,7 +692,7 @@ public:
                 rayon = 0.5f;
                 break;
             case 6:
-                mur(vertices,uvs,indices, normals);
+                mur(vertices,uvs,indices, normals, tangents);
                 break;
             case 7:
                 plateforme(vertices, uvs, indices);
@@ -1680,11 +1708,31 @@ int main( void ){
     //     std::vector<const char*>{"modeles/sphere2.off","modeles/sphere.off"}
     // );
 
-    std::shared_ptr<SNode> mur_p1 = std::make_shared<SNode>(6,"textures/interieur.jpg");
-    std::shared_ptr<SNode> mur_p2 = std::make_shared<SNode>(6,"textures/interieur.jpg");
-    std::shared_ptr<SNode> mur_p3 = std::make_shared<SNode>(6,"textures/interieur.jpg");
-    std::shared_ptr<SNode> mur_p4 = std::make_shared<SNode>(6,"textures/interieur.jpg");
-    std::shared_ptr<SNode> plafond = std::make_shared<SNode>(1,"textures/interieur.jpg");
+    std::shared_ptr<SNode> mur_p1 = std::make_shared<SNode>(6,"pbr/mur_albedo.png",
+    "pbr/mur_normal.png",
+    "pbr/mur_roughness.png",
+    "pbr/metalness_noir.png",
+    "pbr/mur_ao.png");
+    std::shared_ptr<SNode> mur_p2 = std::make_shared<SNode>(6,"pbr/mur_albedo.png",
+    "pbr/mur_normal.png",
+    "pbr/mur_roughness.png",
+    "pbr/metalness_noir.png",
+    "pbr/mur_ao.png");
+    std::shared_ptr<SNode> mur_p3 = std::make_shared<SNode>(6,"pbr/mur_albedo.png",
+    "pbr/mur_normal.png",
+    "pbr/mur_roughness.png",
+    "pbr/metalness_noir.png",
+    "pbr/mur_ao.png");
+    std::shared_ptr<SNode> mur_p4 = std::make_shared<SNode>(6,"pbr/mur_albedo.png",
+    "pbr/mur_normal.png",
+    "pbr/mur_roughness.png",
+    "pbr/metalness_noir.png",
+    "pbr/mur_ao.png");
+    std::shared_ptr<SNode> plafond = std::make_shared<SNode>(1,"pbr/mur_albedo.png",
+    "pbr/mur_normal.png",
+    "pbr/mur_roughness.png",
+    "pbr/metalness_noir.png",
+    "pbr/mur_ao.png");
 
     mur_p1->transform.position = glm::vec3(0.0,0.0,-5.0f);
     mur_p2->transform.position = glm::vec3(4.685,0.0,-0.315f);
@@ -1847,6 +1895,7 @@ int main( void ){
 
 
     scene->add_light(glm::vec3(1., 1., 1.));
+    scene->add_light(glm::vec3(0., 95., 0.));
     scene->add_light(glm::vec3(chat->transform.position));
 
     
