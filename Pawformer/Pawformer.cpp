@@ -81,15 +81,17 @@ int nPreviousState = GLFW_RELEASE;
 int fPreviousState = GLFW_RELEASE;
 float cam_distance = 10.0f;
 
-float jump_height = 11.0f;
+// float jump_height = 11.0f;
 bool isJumping = false;
 bool isFalling = false;
 bool isGrabbing = false;
 
 double gravite = 10.0f;
 double masse_chat = 2.0f;
-float rayon_chat = 0.5f;
+glm::vec3 acceleration = glm::vec3(0.0f,-gravite,0.0f);
+glm::vec3 vitesse = glm::vec3(0.0f);
 
+float rayon_chat = 0.5f;
 double poids = masse_chat*gravite;
 
 bool PBR_OnOff = false;
@@ -999,10 +1001,10 @@ float gethauteur(std::shared_ptr<Scene> scene,std::shared_ptr<SNode> chat){
                 largeur = 5.0f * plan->transform.scale[0];
                 longueur = 5.0f * plan->transform.scale[0];
             }
-            if(plan->type_objet == 3){
-                largeur = plan->transform.scale[0];
-                longueur = plan->transform.scale[0];
-            }
+            // if(plan->type_objet == 3){
+            //     largeur = plan->transform.scale[0];
+            //     longueur = plan->transform.scale[0];
+            // }
 
             if(position_chat.x >= planX - largeur && position_chat.x <= planX + largeur &&
                 position_chat.z >= planZ - longueur && position_chat.z<= planZ + longueur
@@ -1010,7 +1012,7 @@ float gethauteur(std::shared_ptr<Scene> scene,std::shared_ptr<SNode> chat){
 
                 if(plan->transform.position.y > hauteurMax && position_chat.y > plan->transform.position.y){
                     if(plan->type_objet == 1) hauteurMax = plan->transform.position.y - 0.15f;
-                    if(plan->type_objet == 3) hauteurMax = plan->transform.position.y + plan->transform.scale.y*rayon_chat-0.15f;
+                    // if(plan->type_objet == 3) hauteurMax = plan->transform.position.y + plan->transform.scale.y*rayon_chat-0.15f;
                 }
             }
         }
@@ -1540,7 +1542,7 @@ private:
 
 /*******************************************************************************/
 
-void processInput(GLFWwindow *window,std::shared_ptr<SNode> soleil,ma_engine engine);
+void processInput(GLFWwindow *window,std::shared_ptr<SNode> soleil,glm::vec3& vitesse,bool& isJumping,ma_engine engine);
 bool input_toggle(int pressed_key, int &previous_state_key, bool &toggle_bool){
     bool is_toggled = glfwGetKey(window, pressed_key) == GLFW_PRESS && previous_state_key ==  GLFW_RELEASE;
     if(is_toggled){
@@ -1899,7 +1901,7 @@ int main( void ){
     scene->add_light(glm::vec3(chat->transform.position));
 
     
-    chat->transform.position = glm::vec3(-2.0f,2.0f,-2.0f);
+    chat->transform.position = glm::vec3(-2.0f,5.0f,-2.0f);
     // plan2->transform.position = glm::vec3(0.0f,4.65f,-9.65f);
     // mur->transform.position = glm::vec3(0.0f,0.0f,-5.0f);
     // mesh_chat_test->transform.scale = glm::vec3(10.0f);
@@ -1918,8 +1920,6 @@ int main( void ){
     std::vector<glm::vec3> terrainVertices = plan->vertices;
     std::vector<unsigned short> terrainIndices = plan->indices;
 
-    glm::vec3 acceleration = glm::vec3(0.0f,-gravite,0.0f);
-    glm::vec3 vitesse = glm::vec3(0.0f,0.0f,0.0f);
 
     float plan_hauteur = gethauteur(scene,chat);
 
@@ -1934,7 +1934,7 @@ int main( void ){
 
         // input
         // -----
-        processInput(window,chat,engine);
+        processInput(window,chat,vitesse,isJumping,engine);
 
         pf.update(deltaTime);
         pf2.update(deltaTime);
@@ -1943,7 +1943,7 @@ int main( void ){
 
         if(oiia){
             chat->transform.rotation += glm::vec3(0.0f,1.0f,0.0f) * (deltaTime*18);
-            chat->transform.position.y += deltaTime*10;
+            chat->transform.position.y += deltaTime*2;
         }
 
         cube2->transform.rotation += glm::vec3(0.0f, 0.01f, 0.0f);
@@ -1953,26 +1953,51 @@ int main( void ){
 
         scene->lights[1].position = chat->transform.position;
 
+        // float hauteur_chat = chat->transform.scale.y;
+        // if(!isJumping) plan_hauteur = gethauteur(scene,chat);
+
         float hauteur_chat = chat->transform.scale.y;
-        if(!isJumping) plan_hauteur = gethauteur(scene,chat);
+        // plan_hauteur = gethauteur(scene,chat);
+        float seuil_sol = plan_hauteur + hauteur_chat;
 
-        if(isJumping){
-            chat->transform.position.y += deltaTime * 22.0f;
+        bool auSol = chat->transform.position.y <= seuil_sol;
+
+        // std::cout << "seuil_sol : " << seuil_sol << std::endl;
+        // std::cout << "chat pos : " << chat->transform.position.y << std::endl;
+        // std::cout << auSol << std::endl;
+
+        if(isJumping || isFalling){
+            if(isGrabbing){
+                isFalling = false;
+                isJumping = false;
+            }
+
+            // chat->transform.position.y += deltaTime * 22.0f;
             vitesse += acceleration * deltaTime;
-        }else{
-            isFalling = true;
-            if(!isGrabbing) chat->transform.position.y -= vitesse.length() * deltaTime * 11;
+            chat->transform.position += vitesse * deltaTime;
 
-            if (chat->transform.position.y < plan_hauteur + hauteur_chat) {
-                chat->transform.position.y = plan_hauteur + hauteur_chat;
+            if (chat->transform.position.y <= seuil_sol) {
+                plan_hauteur = gethauteur(scene,chat);
+                chat->transform.position.y = seuil_sol;
+                vitesse.y = 0.0f;
+                isJumping = false;
                 isFalling = false;
             }
+        }else if(vitesse.y <= 0.0f){
+            isFalling = true;
+            isJumping = false;
+            // if(!isGrabbing) chat->transform.position.y -= vitesse.length() * deltaTime * 11;
+
+            // if (chat->transform.position.y < plan_hauteur + hauteur_chat) {
+            //     chat->transform.position.y = plan_hauteur + hauteur_chat;
+            //     isFalling = false;
+            // }
         }
         // std::cout << "(pos.y | plan+jump)" << cube->transform.position.y << " | " << plan_hauteur+jump_height.y << std::endl;
-        if (chat->transform.position.y > plan_hauteur + jump_height){
-            isJumping = false;
-            isFalling = true;
-        }
+        // if (chat->transform.position.y > plan_hauteur + jump_height){
+        //     isJumping = false;
+        //     isFalling = true;
+        // }
 
         isGrabbing = false;
         if (debugFilaire) {
@@ -1995,7 +2020,6 @@ int main( void ){
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
-
 
         // Use our shader
         glUseProgram(programID);
@@ -2059,7 +2083,7 @@ float ClipAngle180(float _angle){
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window, std::shared_ptr<SNode> chat,ma_engine engine){
+void processInput(GLFWwindow *window, std::shared_ptr<SNode> chat,glm::vec3& vitesse,bool &isJumping,ma_engine engine){
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
@@ -2238,8 +2262,9 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> chat,ma_engine engi
         chat->transform.position += glm::vec3(0.0f, 0.1f, 0.0f);
 
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !isJumping && !isFalling && !isGrabbing){
+        std::cout << "SAUT !" << std::endl;
         isJumping = true;
-        chat->transform.position.y += deltaTime;
+        vitesse.y = 10.0f;
     } 
 }
 
