@@ -105,6 +105,9 @@ int o_p_s = GLFW_RELEASE;
 bool person = false;
 int person_state = GLFW_RELEASE;
 
+int current_indice = 0;
+int indice_plateforme = -1;
+
 /*******************************************************************************/
 
 void initImgui(GLFWwindow* window){
@@ -606,6 +609,8 @@ void computeTangentsFromMesh(
 class SNode : public std::enable_shared_from_this<SNode> {
 public:
     Transform transform;
+    int indice;
+
     std::vector<std::shared_ptr<SNode>> feuilles;
     std::shared_ptr<SNode> parent = nullptr;
     GLuint vao = 0, vbo = 0, ibo = 0, tangentVBO = 0, textureID = 0, normalsID = 0, roughnessID = 0, metalnessID = 0, aoID = 0;
@@ -776,6 +781,9 @@ public:
     }
 
     void addFeuille(std::shared_ptr<SNode> feuille){
+        feuille->indice = current_indice;
+        current_indice++;
+
         feuilles.push_back(feuille);
         feuille->parent = shared_from_this();
     }
@@ -1090,6 +1098,7 @@ void processSphereCollision(glm::vec3 &pos_chat, std::shared_ptr<SNode> sphere, 
         // FOLLOW SPHERE ROTATION if on top
         if (cosCollision > 0.5f) {
             plan_hauteur = (sphere->transform.position + offset * rayon_sphere).y +rayon_chat;
+            indice_plateforme = sphere->indice;
             isFalling = false;
             pos_chat.y = plan_hauteur;
 
@@ -1185,6 +1194,7 @@ void processCylindreCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNod
                 
                 glm::vec3 contactPos = topWorld + cylUp * rayon_chat;
                 plan_hauteur = contactPos.y;
+                indice_plateforme = cylindre->indice;
                 chat->transform.position.y = contactPos.y;
                 vitesse.y = 0.0f;
                 isFalling = false;
@@ -1295,6 +1305,7 @@ void processCubeCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> c
             glm::vec3 newPosWorld = glm::vec3(model * glm::vec4(newPos, 1.0f));
             if(cosCollision > 0.5){
                 plan_hauteur = newPosWorld.y;
+                indice_plateforme = cube->indice;
                 isFalling = false;
             }
             if(cosCollision < -0.5){
@@ -1416,6 +1427,7 @@ void processMeshCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNode> m
         float cosCollision = glm::dot(glm::vec3(0., 1., 0.), triangleNormal);
         if(cosCollision >= 0.5f){
             plan_hauteur = glm::vec3(model * glm::vec4(localCorrection, 1.0f)).y;
+            indice_plateforme = mesh->indice;
             chat->transform.position.y = plan_hauteur;
             isFalling = false;
             glm::vec4 relativePos = glm::inverse(mesh->lastModelMatrix) * glm::vec4(chat->transform.position, 1.0f);
@@ -1446,6 +1458,8 @@ enum class MovementType {
 
 struct PlateformeMobile {
     std::shared_ptr<SNode> node;
+    glm::vec3 previousPosition;
+    glm::vec3 currentPosition;
 
     MovementType movementType = MovementType::CARRE;
     float speed = 5.0f;
@@ -1462,6 +1476,7 @@ struct PlateformeMobile {
     float rotationSpeed = 1.0f;
 
     void update(float deltaTime) {
+        previousPosition = node->transform.position;
         switch (movementType) {
             case MovementType::CARRE:
                 updateCarre(deltaTime);
@@ -1479,9 +1494,15 @@ struct PlateformeMobile {
                 updateCirculaire(deltaTime);
                 break;
         }
+        currentPosition = node->transform.position;
+    }
+    public:
+    glm::vec3 getVelocity(float deltaTime) const {
+        if(deltaTime == 0.0f) return glm::vec3(0.0f);
+        return (currentPosition - previousPosition) / deltaTime;
     }
 
-private:
+    private:
     void updateCarre(float deltaTime) {
         float step = deltaTime * speed;
         auto& pos = node->transform.position;
@@ -1658,28 +1679,6 @@ int main( void ){
     GLuint heightScaleID = glGetUniformLocation(programID,"heightScale");
     glUniform1f(heightScaleID,1.0f);
 
-    // stbi_set_flip_vertically_on_load(true);
-    // int width, height, nrComponents;
-    // float *data = stbi_loadf("textures/brown_photostudio_02_4k.hdr", &width, &height, &nrComponents, 0);
-    // unsigned int hdrTexture;
-    // if (data)
-    // {
-    //     glGenTextures(1, &hdrTexture);
-    //     glBindTexture(GL_TEXTURE_2D, hdrTexture);
-    //     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, data); 
-
-    //     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    //     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    //     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    //     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    //     stbi_image_free(data);
-    // }
-    // else
-    // {
-    //     std::cout << "Failed to load HDR image." << std::endl;
-    // }
-
     int heightmapWidth, heightmapHeight, nrChannels;
     unsigned char *heightmapData = stbi_load("textures/heightmap-1024x1024.png", &heightmapWidth, &heightmapHeight, &nrChannels, 1);
 
@@ -1687,11 +1686,7 @@ int main( void ){
 
     std::shared_ptr<Scene> scene = std::make_shared<Scene>();
 
-    // std::shared_ptr<SNode> cube = std::make_shared<SNode>(3,glm::vec3(1.0,0.0,0.0));
-    // std::shared_ptr<SNode> cube = std::make_shared<SNode>(3,"textures/rock.png");
-    // std::shared_ptr<SNode> chat = std::make_shared<SNode>(4,vec3(1.0,0.1,0.2));
     std::shared_ptr<SNode> chat = std::make_shared<SNode>(4,"modeles/fure.png");
-    // std::shared_ptr<SNode> cube = std::make_shared<SNode>(4,glm::vec3(1.0,0.0,0.0));
     std::shared_ptr<SNode> soleil = std::make_shared<SNode>(0,"pbr/rustediron2_basecolor.png",
         "pbr/rustediron2_normal.png", 
         "pbr/rustediron2_roughness.png", 
@@ -1714,40 +1709,47 @@ int main( void ){
         "pbr/TCom_Scifi_Panel_512_metallic.png",
         "pbr/TCom_Scifi_Panel_512_ao.png"
     );
-    
-    
-    // Sans LOD
-    // std::shared_ptr<SNode> soleil = std::make_shared<SNode>(
-    //     2,
-    //     "textures/s2.png",
-    //     std::vector<const char*>{"modeles/sphere2.off","modeles/sphere.off"}
-    // );
 
-    std::shared_ptr<SNode> mur_p1 = std::make_shared<SNode>(6,"pbr/mur_albedo.png",
-    "pbr/mur_normal.png",
-    "pbr/mur_roughness.png",
-    "pbr/metalness_noir.png",
-    "pbr/mur_ao.png");
-    std::shared_ptr<SNode> mur_p2 = std::make_shared<SNode>(6,"pbr/mur_albedo.png",
-    "pbr/mur_normal.png",
-    "pbr/mur_roughness.png",
-    "pbr/metalness_noir.png",
-    "pbr/mur_ao.png");
-    std::shared_ptr<SNode> mur_p3 = std::make_shared<SNode>(6,"pbr/mur_albedo.png",
-    "pbr/mur_normal.png",
-    "pbr/mur_roughness.png",
-    "pbr/metalness_noir.png",
-    "pbr/mur_ao.png");
-    std::shared_ptr<SNode> mur_p4 = std::make_shared<SNode>(6,"pbr/mur_albedo.png",
-    "pbr/mur_normal.png",
-    "pbr/mur_roughness.png",
-    "pbr/metalness_noir.png",
-    "pbr/mur_ao.png");
-    std::shared_ptr<SNode> plafond = std::make_shared<SNode>(1,"pbr/mur_albedo.png",
-    "pbr/mur_normal.png",
-    "pbr/mur_roughness.png",
-    "pbr/metalness_noir.png",
-    "pbr/mur_ao.png");
+    std::shared_ptr<SNode> mur_p1 = std::make_shared<SNode>(
+        6,
+        "pbr/mur_albedo.png",
+        "pbr/mur_normal.png",
+        "pbr/mur_roughness.png",
+        "pbr/metalness_noir.png",
+        "pbr/mur_ao.png"
+    );
+    std::shared_ptr<SNode> mur_p2 = std::make_shared<SNode>(
+        6,
+        "pbr/mur_albedo.png",
+        "pbr/mur_normal.png",
+        "pbr/mur_roughness.png",
+        "pbr/metalness_noir.png",
+        "pbr/mur_ao.png"
+    );
+    std::shared_ptr<SNode> mur_p3 = std::make_shared<SNode>(
+        6,
+        "pbr/mur_albedo.png",
+        "pbr/mur_normal.png",
+        "pbr/mur_roughness.png",
+        "pbr/metalness_noir.png",
+        "pbr/mur_ao.png"
+    );
+    std::shared_ptr<SNode> mur_p4 = std::make_shared<SNode>(
+        6,
+        "pbr/mur_albedo.png",
+        "pbr/mur_normal.png",
+        "pbr/mur_roughness.png",
+        "pbr/metalness_noir.png",
+        "pbr/mur_ao.png"
+    );
+    std::shared_ptr<SNode> plafond = std::make_shared<SNode>(
+        1,
+        "pbr/mur_albedo.png",
+        "pbr/mur_normal.png",
+        "pbr/mur_roughness.png",
+        "pbr/metalness_noir.png",
+        "pbr/mur_ao.png"
+    );
 
     mur_p1->transform.position = glm::vec3(0.0,0.0,-5.0f);
     mur_p2->transform.position = glm::vec3(4.685,0.0,-0.315f);
@@ -1757,23 +1759,19 @@ int main( void ){
     mur_p4->transform.position = glm::vec3(0.0,0.0,4.685f);
     plafond->transform.position = glm::vec3(0.0f,9.685f,0.0f);
 
-
-    std::shared_ptr<SNode> jump;
-    std::shared_ptr<SNode> plan = std::make_shared<SNode>(1,"pbr/parquet_albedo.png",
-    "pbr/parquet_normal.png",
-    "pbr/parquet_roughness.png",
-    "pbr/metalness_noir.png",
-    "pbr/parquet_ao.png");
+    std::shared_ptr<SNode> plan = std::make_shared<SNode>(
+        1,
+        "pbr/parquet_albedo.png",
+        "pbr/parquet_normal.png",
+        "pbr/parquet_roughness.png",
+        "pbr/metalness_noir.png",
+        "pbr/parquet_ao.png"
+    );
     plan->transform.scale = glm::vec3(10.0f);
-    // std::shared_ptr<SNode> plan2 = std::make_shared<SNode>(3,"textures/grass.png");
-    // plan2->transform.scale = glm::vec3(2.0f);
-    
-    // std::shared_ptr<SNode> mur = std::make_shared<SNode>(6,"textures/rock.png");
-    // std::shared_ptr<SNode> mesh_chat_test = std::make_shared<SNode>(8, glm::vec3(0.0f, 0.0f, 0.0f));
 
     scene->racine->addFeuille(chat);
-
     scene->racine->addFeuille(plan);
+
     plan->addFeuille(mur_p1);
     plan->addFeuille(mur_p2);
     plan->addFeuille(mur_p3);
@@ -1900,25 +1898,11 @@ int main( void ){
     pf4.minZ = -3.5f;
     pf4.maxZ = 3.5f;
 
-    // scene->racine->addFeuille(mur);
-    
-    // scene->racine->addFeuille(plan2);
-    // scene->racine->addFeuille(plateforme);
-    // scene->racine->addFeuille(plateforme2);
-    // scene->racine->addFeuille(plateforme3);
-    // scene->racine->addFeuille(mesh_chat_test);
-
-
     // scene->add_light(glm::vec3(1., 1., 1.));
     scene->add_light(glm::vec3(0., 95., 0.));
     // scene->add_light(glm::vec3(chat->transform.position));
-
     
     chat->transform.position = glm::vec3(-2.0f,5.0f,-2.0f);
-    // plan2->transform.position = glm::vec3(0.0f,4.65f,-9.65f);
-    // mur->transform.position = glm::vec3(0.0f,0.0f,-5.0f);
-    // mesh_chat_test->transform.scale = glm::vec3(10.0f);
-    // mesh_chat_test->transform.position = glm::vec3(20., 0., 20.);
 
     initImgui(window);
 
@@ -1933,11 +1917,15 @@ int main( void ){
     std::vector<glm::vec3> terrainVertices = plan->vertices;
     std::vector<unsigned short> terrainIndices = plan->indices;
 
-
     float plan_hauteur = gethauteur(scene,chat)+chat->transform.scale.y;
     chat->transform.position.y = plan_hauteur+rayon_chat;
 
+    PlateformeMobile* currentPlatform = nullptr;
+    PlateformeMobile* previousPlatform = nullptr;
+    glm::vec3 platformVelocity = glm::vec3(0.0f);
+
     do{
+        indice_plateforme = -1;
         // Measure speed
         // per-frame time logic
         // --------------------
@@ -1945,7 +1933,6 @@ int main( void ){
         deltaTime = currentFrame - lastFrame;
         // std::cout << "d : " << deltaTime << std::endl;
         lastFrame = currentFrame;
-
         // input
         // -----
         processInput(window,chat,vitesse,isJumping,engine);
@@ -1968,21 +1955,20 @@ int main( void ){
         GLuint PhongID = glGetUniformLocation(programID,"Phong_OnOff");
         glUniform1i(PhongID,Phong_OnOff);
 
-        // scene->lights[1].position = chat->transform.position;
-
-        // float hauteur_chat = chat->transform.scale.y;
-        // if(!isJumping) plan_hauteur = gethauteur(scene,chat);
-
         float hauteur_chat = chat->transform.scale.y;
-        // plan_hauteur = gethauteur(scene,chat);
         float seuil_sol = plan_hauteur;
 
-        bool auSol = chat->transform.position.y <= seuil_sol;
+        if (isJumping && chat->transform.position.y <= seuil_sol && !isFalling) {
 
-        // std::cout << "seuil_sol : " << seuil_sol << std::endl;
-        // std::cout << "chat pos : " << chat->transform.position.y << std::endl;
-        // std::cout << auSol << std::endl;
+            if (currentPlatform != nullptr) {
+                platformVelocity = currentPlatform->getVelocity(deltaTime);
+            }
+
+            vitesse = glm::vec3(platformVelocity.x, platformVelocity.y + 20.0f, platformVelocity.z);
+        }
+
         plan_hauteur = gethauteur(scene,chat)+hauteur_chat;
+
         if(!isGrabbing){
             isJumping = false;
             isFalling = true;
@@ -1993,32 +1979,28 @@ int main( void ){
                 isJumping = false;
             }
 
-            // chat->transform.position.y += deltaTime * 22.0f;
             vitesse += acceleration * deltaTime;
             chat->transform.position += vitesse * deltaTime;
 
             if (chat->transform.position.y <= seuil_sol) {
-                
                 chat->transform.position.y = seuil_sol;
-                vitesse.y = 0.0f;
+                vitesse = glm::vec3(0.0f);
                 isJumping = false;
                 isFalling = false;
+
+                std::cout << (previousPlatform == nullptr) << std::endl;
+
+                if (previousPlatform != nullptr && currentPlatform->node->indice != previousPlatform->node->indice) {
+                    vitesse.x = 0.0f;
+                    vitesse.z = 0.0f;
+                } else {
+                    if(previousPlatform == nullptr) vitesse = glm::vec3(0.0f);
+                }
             }
         }else if(vitesse.y <= 0.0f){
             isFalling = true;
             isJumping = false;
-            // if(!isGrabbing) chat->transform.position.y -= vitesse.length() * deltaTime * 11;
-
-            // if (chat->transform.position.y < plan_hauteur + hauteur_chat) {
-            //     chat->transform.position.y = plan_hauteur + hauteur_chat;
-            //     isFalling = false;
-            // }
         }
-        // std::cout << "(pos.y | plan+jump)" << cube->transform.position.y << " | " << plan_hauteur+jump_height.y << std::endl;
-        // if (chat->transform.position.y > plan_hauteur + jump_height){
-        //     isJumping = false;
-        //     isFalling = true;
-        // }
 
         isGrabbing = false;
         if (debugFilaire) {
@@ -2027,6 +2009,10 @@ int main( void ){
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);  // Vue normale
         }
 
+        previousPlatform = currentPlatform;
+        currentPlatform = nullptr;
+        platformVelocity = glm::vec3(0.0f);
+
         for(const std::shared_ptr<SNode>& object: scene->racine->getFeuilles()){
             processSphereCollision(chat->transform.position, object, plan_hauteur);
             processCylindreCollision(chat, object, plan_hauteur);
@@ -2034,6 +2020,13 @@ int main( void ){
             processMeshCollision(chat, object, plan_hauteur);
             processCubeCollision(chat, object, plan_hauteur);
             object->lastModelMatrix = object->getModelMatrix();
+        }
+
+        for(PlateformeMobile* pm : {&pf,&pf2,&pf3,&pf4}){
+            if(indice_plateforme == pm->node->indice){
+                currentPlatform = pm;
+                break;
+            }
         }
 
         // Clear the screen
@@ -2051,25 +2044,18 @@ int main( void ){
         GLuint camPosID = glGetUniformLocation(programID,"camPos");
         glUniform3fv(camPosID, 1, &camera_position[0]);
 
-        // std::cout << "[Loop] Début frame" << std::endl;
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-
-        // std::cout << "[Loop] ImGui frame commencée" << std::endl;
 
         ImGui::SetNextWindowSize(ImVec2(400, 75), ImGuiCond_Always);
         ImGui::Begin("Debug Info", nullptr, flags);
         ImGui::Text("Hauteur : %.2f m", chat->transform.position.y - 0.85f);
         ImGui::End();
 
-        // std::cout << "[Loop] Fenêtre affichée" << std::endl;
-
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-        // std::cout << "[Loop] Render OK" << std::endl;
 
         // Swap buffers
         glfwSwapBuffers(window);
