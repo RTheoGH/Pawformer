@@ -20,6 +20,7 @@ uniform int nbLights;
 uniform vec3 lightsPos[10];
 const float PI = 3.14159265359;
 uniform int PBR_OnOff;
+uniform int Phong_OnOff;
 
 // // uniform sampler2D equirectangularMap;
 
@@ -152,6 +153,35 @@ void main(){
                 // color_temp *= 2.0;
                 
         }
+        else if (Phong_OnOff == 1) {
+                vec3 N = normalize(normal);
+                vec3 V = normalize(camPos - fragPos);
+                vec3 albedo = (isColor == 1) ? objColor : texture(texture1, UV).rgb;
+
+                vec3 ambient = 0.5 * albedo;
+                vec3 result = ambient;
+
+                for (int i = 0; i < nbLights; ++i) {
+                        vec3 L = normalize(lightsPos[i] - fragPos);
+                        vec3 R = reflect(-L, N);
+
+                        float diff = max(dot(N, L), 0.0);
+                        vec3 diffuse = diff * albedo;
+
+                        float spec = pow(max(dot(R, V), 0.0), 16.0);
+                        vec3 specular = spec * vec3(1.0);
+
+                        float dist = length(lightsPos[i] - fragPos);
+                        float attenuation = 1.0 / 2.0;
+                        float lightPower = 4.0;
+
+                        result += attenuation * lightPower * (0.5 * diffuse + 0.3 * specular);
+                }
+
+                color_temp = result / (result + vec3(1.0));
+                color_temp = pow(color_temp, vec3(1.0 / 2.2));
+        }
+
 
         color = color_temp;
         

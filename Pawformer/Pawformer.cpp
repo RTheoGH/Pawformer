@@ -95,7 +95,9 @@ float rayon_chat = 0.5f;
 double poids = masse_chat*gravite;
 
 bool PBR_OnOff = false;
-int p_preview_state = GLFW_RELEASE;
+bool Phong_OnOff = false;
+int p_previous_state = GLFW_RELEASE;
+int b_previous_state = GLFW_RELEASE;
 
 bool oiia = false;
 int o_p_s = GLFW_RELEASE;
@@ -992,7 +994,7 @@ float gethauteur(std::shared_ptr<Scene> scene,std::shared_ptr<SNode> chat){
     glm::vec3 position_chat = chat->transform.position;
 
     for(const std::shared_ptr<SNode>& plan: scene->racine->feuilles){
-        if(plan->type_objet == 1 || plan->type_objet == 3){
+        if(plan->type_objet == 1){
             float planX = plan->transform.position.x;
             float planZ = plan->transform.position.z;
             float largeur;
@@ -1907,9 +1909,9 @@ int main( void ){
     // scene->racine->addFeuille(mesh_chat_test);
 
 
-    scene->add_light(glm::vec3(1., 1., 1.));
+    // scene->add_light(glm::vec3(1., 1., 1.));
     scene->add_light(glm::vec3(0., 95., 0.));
-    scene->add_light(glm::vec3(chat->transform.position));
+    // scene->add_light(glm::vec3(chat->transform.position));
 
     
     chat->transform.position = glm::vec3(-2.0f,5.0f,-2.0f);
@@ -1933,6 +1935,7 @@ int main( void ){
 
 
     float plan_hauteur = gethauteur(scene,chat)+chat->transform.scale.y;
+    chat->transform.position.y = plan_hauteur+rayon_chat;
 
     do{
         // Measure speed
@@ -1958,13 +1961,14 @@ int main( void ){
         }
 
         cube2->transform.rotation += glm::vec3(0.0f, 0.01f, 0.0f);
-        
-        // std::cout<<isGrabbing<<std::endl;
 
         GLuint PBRID = glGetUniformLocation(programID,"PBR_OnOff");
-        glUniform1i(PBRID,(PBR_OnOff) ? 1 : 0);
+        glUniform1i(PBRID,PBR_OnOff);
 
-        scene->lights[1].position = chat->transform.position;
+        GLuint PhongID = glGetUniformLocation(programID,"Phong_OnOff");
+        glUniform1i(PhongID,Phong_OnOff);
+
+        // scene->lights[1].position = chat->transform.position;
 
         // float hauteur_chat = chat->transform.scale.y;
         // if(!isJumping) plan_hauteur = gethauteur(scene,chat);
@@ -1978,6 +1982,7 @@ int main( void ){
         // std::cout << "seuil_sol : " << seuil_sol << std::endl;
         // std::cout << "chat pos : " << chat->transform.position.y << std::endl;
         // std::cout << auSol << std::endl;
+        plan_hauteur = gethauteur(scene,chat)+hauteur_chat;
         if(!isGrabbing){
             isJumping = false;
             isFalling = true;
@@ -1993,7 +1998,7 @@ int main( void ){
             chat->transform.position += vitesse * deltaTime;
 
             if (chat->transform.position.y <= seuil_sol) {
-                plan_hauteur = gethauteur(scene,chat)+hauteur_chat;
+                
                 chat->transform.position.y = seuil_sol;
                 vitesse.y = 0.0f;
                 isJumping = false;
@@ -2110,10 +2115,10 @@ void processInput(GLFWwindow *window, std::shared_ptr<SNode> chat,glm::vec3& vit
     if(input_toggle(GLFW_KEY_N, nPreviousState, cam_attache) && !cam_attache){
         camera_position = glm::vec3(1.0, 1.0, 1.0);
         camera_target = glm::vec3(0.0, 0.0, 0.0);
-        std::cout<<camera_position[0]<<", "<<camera_position[1]<<std::endl;
     }
         
-    input_toggle(GLFW_KEY_P,p_preview_state,PBR_OnOff);
+    input_toggle(GLFW_KEY_P,p_previous_state,PBR_OnOff);
+    input_toggle(GLFW_KEY_B,b_previous_state,Phong_OnOff);
 
     input_toggle(GLFW_KEY_F5,person_state,person);
 
