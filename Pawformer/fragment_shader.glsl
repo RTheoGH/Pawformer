@@ -158,28 +158,34 @@ void main(){
                 vec3 V = normalize(camPos - fragPos);
                 vec3 albedo = (isColor == 1) ? objColor : texture(texture1, UV).rgb;
 
-                vec3 ambient = 0.5 * albedo;
+                // === Lumière ambiante ===
+                vec3 ambient = 0.9 * albedo;
+
                 vec3 result = ambient;
 
                 for (int i = 0; i < nbLights; ++i) {
                         vec3 L = normalize(lightsPos[i] - fragPos);
+                        float LN = max(dot(L, N), 0.0);
+                        
+                        // === Diffuse ===
+                        vec3 Id = albedo * LN;
+
+                        // === Speculaire ===
                         vec3 R = reflect(-L, N);
+                        float spec = pow(max(dot(R, V), 0.0), 2.0);
+                        vec3 Is = vec3(1.0) * spec;
 
-                        float diff = max(dot(N, L), 0.0);
-                        vec3 diffuse = diff * albedo;
-
-                        float spec = pow(max(dot(R, V), 0.0), 16.0);
-                        vec3 specular = spec * vec3(1.0);
-
+                        // === Atténuation simple ===
                         float dist = length(lightsPos[i] - fragPos);
-                        float attenuation = 1.0 / 2.0;
-                        float lightPower = 4.0;
+                        float attenuation = 1.0 / (0.5 + 0.05 * dist + 0.01 * dist * dist);
+                        float lightPower = 25.0;
 
-                        result += attenuation * lightPower * (0.5 * diffuse + 0.3 * specular);
+                        result += attenuation * lightPower * (Id + Is);
                 }
 
-                color_temp = result / (result + vec3(1.0));
-                color_temp = pow(color_temp, vec3(1.0 / 2.2));
+                // === Pas de tone mapping au début ===
+                color_temp = clamp(result, 0.0, 1.0);
+                // color_temp = result
         }
 
 

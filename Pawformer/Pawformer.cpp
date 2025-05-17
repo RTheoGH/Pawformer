@@ -1797,7 +1797,7 @@ int main( void ){
     std::shared_ptr<SNode> plateforme3 = std::make_shared<SNode>(7, "textures/corde_texture.png");
     plateforme->transform.position = glm::vec3(1.5, 2., 0.);
     plateforme->transform.scale = glm::vec3(0.5f);
-    plateforme2->transform.position = glm::vec3(-1.5, 5., -1.5);
+    plateforme2->transform.position = glm::vec3(-1.5, 5.5, -1.5);
     plateforme2->transform.scale = glm::vec3(0.5f);
     plateforme3->transform.position = glm::vec3(-1.5, 8., 1.5);
     plateforme3->transform.rotation = glm::vec3(0.2f, 0.0f, 0.0f);
@@ -1873,7 +1873,7 @@ int main( void ){
     pf2.maxY = 20.0f;
 
     std::shared_ptr<SNode> plateforme3_t2 = std::make_shared<SNode>(7, "textures/corde_texture.png");
-    plateforme3_t2->transform.position = glm::vec3(-3.0f, 5.0f, 0.f);
+    plateforme3_t2->transform.position = glm::vec3(-3.0f, 4.5f, 0.f);
     plateforme3_t2->transform.scale = glm::vec3(0.5f);
 
     tronc2->addFeuille(plateforme3_t2);
@@ -1897,6 +1897,19 @@ int main( void ){
     pf4.maxX = 3.5f;
     pf4.minZ = -3.5f;
     pf4.maxZ = 3.5f;
+
+    std::shared_ptr<SNode> plateforme5_t2 = std::make_shared<SNode>(7, "textures/corde_texture.png");
+    plateforme5_t2->transform.position = glm::vec3(-14.0f, 20.0f, 0.f);
+    plateforme5_t2->transform.scale = glm::vec3(0.5f);
+
+    tronc2->addFeuille(plateforme5_t2);
+
+    PlateformeMobile pf5;
+    pf5.node = plateforme5_t2;
+    pf5.movementType = MovementType::CIRCULAIRE;
+    pf5.center = glm::vec3(-14.0f,20.0f,0.0f);
+    pf5.radius = 17.0f;
+    pf5.angle = 3.14f;
 
     // scene->add_light(glm::vec3(1., 1., 1.));
     scene->add_light(glm::vec3(0., 95., 0.));
@@ -1941,13 +1954,17 @@ int main( void ){
         pf2.update(deltaTime);
         pf3.update(deltaTime);
         pf4.update(deltaTime*2);
+        pf5.update(deltaTime*1.5f);
 
         if(oiia){
             chat->transform.rotation += glm::vec3(0.0f,1.0f,0.0f) * (deltaTime*18);
-            chat->transform.position.y += deltaTime*2;
+            chat->transform.position.y += deltaTime*4;
         }
 
+        tronc->transform.rotation += glm::vec3(0.0f,0.005f,0.0f);
+        socle->transform.rotation += glm::vec3(0.0f,-0.005f,0.0f);
         cube2->transform.rotation += glm::vec3(0.0f, 0.01f, 0.0f);
+        chat_noir->transform.rotation += glm::vec3(0.0f,0.005f,0.0f);
 
         GLuint PBRID = glGetUniformLocation(programID,"PBR_OnOff");
         glUniform1i(PBRID,PBR_OnOff);
@@ -1988,7 +2005,7 @@ int main( void ){
                 isJumping = false;
                 isFalling = false;
 
-                std::cout << (previousPlatform == nullptr) << std::endl;
+                // std::cout << (previousPlatform == nullptr) << std::endl;
 
                 if (previousPlatform != nullptr && currentPlatform->node->indice != previousPlatform->node->indice) {
                     vitesse.x = 0.0f;
@@ -2022,7 +2039,7 @@ int main( void ){
             object->lastModelMatrix = object->getModelMatrix();
         }
 
-        for(PlateformeMobile* pm : {&pf,&pf2,&pf3,&pf4}){
+        for(PlateformeMobile* pm : {&pf,&pf2,&pf3,&pf4,&pf5}){
             if(indice_plateforme == pm->node->indice){
                 currentPlatform = pm;
                 break;
