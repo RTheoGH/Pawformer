@@ -1196,7 +1196,7 @@ void processCylindreCollision(std::shared_ptr<SNode> &chat, std::shared_ptr<SNod
                 plan_hauteur = contactPos.y;
                 indice_plateforme = cylindre->indice;
                 chat->transform.position.y = contactPos.y;
-                vitesse.y = 0.0f;
+                vitesse = vec3(0.0f);
                 isFalling = false;
                 glm::vec4 relativePos = glm::inverse(cylindre->lastModelMatrix) * glm::vec4(chat->transform.position, 1.0f);
                 glm::vec3 rotatedPos = glm::vec3(model * relativePos);
@@ -2001,11 +2001,10 @@ int main( void ){
 
             if (chat->transform.position.y <= seuil_sol) {
                 chat->transform.position.y = seuil_sol;
+                
                 vitesse = glm::vec3(0.0f);
                 isJumping = false;
                 isFalling = false;
-
-                // std::cout << (previousPlatform == nullptr) << std::endl;
 
                 if (previousPlatform != nullptr && currentPlatform->node->indice != previousPlatform->node->indice) {
                     vitesse.x = 0.0f;
