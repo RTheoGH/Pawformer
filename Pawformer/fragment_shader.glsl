@@ -155,6 +155,7 @@ void main(){
         }
         else if (Phong_OnOff == 1) {
                 vec3 N = normalize(normal);
+                N = getNormalFromMap(N);
                 vec3 V = normalize(camPos - fragPos);
                 vec3 albedo = (isColor == 1) ? objColor : texture(texture1, UV).rgb;
 
